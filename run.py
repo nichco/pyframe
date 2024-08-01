@@ -24,4 +24,8 @@ beam_1.add_load(loads)
 frame.add_beam(beam_1)
 
 
-frame.solve()
+
+solution = frame.solve()
+
+displacement = solution.displacement['beam_1']
+print(displacement)

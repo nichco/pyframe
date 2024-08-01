@@ -221,7 +221,7 @@ class Beam:
 
         return transformed_stiffness_matrices
     
-    
+
     def _transform_mass_matrices(self):
 
         transforms = self._transforms()
@@ -254,4 +254,16 @@ class Beam:
             loads.append(local_stiffness @ T @ displacement)
 
         return loads
+    
+
+    def _mass(self):
+
+        lengths = self._lengths()
+        rho = self.material.density
+        area = self.cs.area()
+
+        element_masses = area * lengths * rho
+        beam_mass = np.sum(element_masses)
+
+        return beam_mass
 

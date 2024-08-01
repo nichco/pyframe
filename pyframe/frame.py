@@ -97,7 +97,7 @@ class Frame:
         # add any inertial loads
 
 
-        
+
 
 
         # apply boundary conditions
@@ -145,6 +145,22 @@ class Frame:
             stress[beam.name] = beam_stress
 
 
+        # mass properties
+        mass = 0
+        for beam in self.beams:
+            mass += beam._mass()
+
+
+
+        
+
+
+        return pf.Solution(displacement=displacement,
+                           stress=stress,
+                           M=M,
+                           K=K,
+                           F=F,
+                           mass=mass,)
 
 
 
