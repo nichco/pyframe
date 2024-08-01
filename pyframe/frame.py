@@ -20,6 +20,9 @@ class Frame:
 
     def add_acc(self, acc:np.array):
 
+        if acc.shape != (6,):
+            raise ValueError("acc must have shape 6")
+
         if self.acc is None:
             self.acc = acc
         else:
@@ -52,7 +55,6 @@ class Frame:
         # the global dimension is the number of unique nodes times
         # the degrees of freedom per node
         dim = len(nodes) * 6
-
         
         # create the global stiffness matrix
         # and the global mass matrix
@@ -95,7 +97,19 @@ class Frame:
 
         
         # add any inertial loads
+        if self.acc is not None:
+            expanded_acc = np.tile(self.acc, len(nodes))
+            primary_inertial_loads = M @ expanded_acc
+            F += primary_inertial_loads
 
+            # added inertial masses are resolved as loads
+            for beam in self.beams:
+                extra_mass = beam.extra_inertial_mass
+                extra_inertial_loads = np.outer(extra_mass, self.acc)
+
+                for i in range(beam.num_nodes):
+                    idx = beam.map[i]
+                    F[idx:idx+6] += extra_inertial_loads[i, :]
 
 
 

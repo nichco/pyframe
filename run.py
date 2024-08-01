@@ -24,6 +24,10 @@ beam_1.add_load(loads)
 frame.add_beam(beam_1)
 
 
+acc = np.array([0, 0, -9.81, 0, 0, 0])
+frame.add_acc(acc)
+
+
 
 solution = frame.solve()
 
