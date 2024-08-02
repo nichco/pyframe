@@ -197,9 +197,10 @@ class Beam:
         
         lengths = self.lengths
         T = np.zeros((12, 12))
+        mesh = self.mesh
 
         for i in range(self.num_elements):
-            cp = (self.mesh[i + 1, :] - self.mesh[i, :]) / lengths[i]
+            cp = (mesh[i + 1, :] - mesh[i, :]) / lengths[i]
             ll, mm, nn = cp[0], cp[1], cp[2]
             D = (ll**2 + mm**2)**0.5
 

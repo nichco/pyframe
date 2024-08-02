@@ -13,12 +13,53 @@ ne = n - 1
 aluminum = pf.Material(E=69E9, G=26E9, density=2700)
 
 
+
 def fun(x):
     frame = pf.Frame()
     beams = []
 
     for i in range(28):
-        thickness = np.abs(x[i])
+        thickness = np.abs(x[i] / 50)
+        beam_radius = np.ones(n - 1) * 0.03#radius[i]
+        cs = pf.CSTube(radius=beam_radius, thickness=thickness)
+        beam = pf.Beam(name='beam_'+str(i), mesh=meshes[i, :, :], material=aluminum, cs=cs)
+
+        if i in [0, 4, 6, 10]: beam.fix(0)
+        if i in [20, 21, 22, 23]: beam.add_inertial_mass(100, 0)
+        if i in [24, 25, 26, 27]: beam.add_inertial_mass(50, 0)
+
+        beams.append(beam)
+        frame.add_beam(beam)
+
+
+    frame.add_joint(members=[beams[0], beams[1], beams[2]], nodes=[0, 0, 0])
+    frame.add_joint(members=[beams[3], beams[4], beams[5]], nodes=[0, 0, 0])
+    frame.add_joint(members=[beams[6], beams[7], beams[8]], nodes=[0, 0, 0])
+    frame.add_joint(members=[beams[9], beams[10], beams[11]], nodes=[0, 0, 0])
+    frame.add_joint(members=[beams[1], beams[3], beams[13], beams[14], beams[20], beams[21]], nodes=[ne, ne, 0, 0, ne, 0])
+    frame.add_joint(members=[beams[4], beams[6], beams[15], beams[17], beams[21], beams[22]], nodes=[ne, ne, 0, 0, ne, 0])
+    frame.add_joint(members=[beams[7], beams[9], beams[16], beams[18], beams[22], beams[23]], nodes=[ne, ne, 0, 0, ne, 0])
+    frame.add_joint(members=[beams[10], beams[0], beams[12], beams[19], beams[20], beams[23]], nodes=[ne, ne, 0, 0, 0, ne])
+    frame.add_joint(members=[beams[2], beams[12], beams[13], beams[24], beams[25]], nodes=[ne, ne, ne, ne, 0])
+    frame.add_joint(members=[beams[5], beams[14], beams[15], beams[25], beams[26]], nodes=[ne, ne, ne, ne, 0])
+    frame.add_joint(members=[beams[8], beams[16], beams[17], beams[26], beams[27]], nodes=[ne, ne, ne, ne, 0])
+    frame.add_joint(members=[beams[11], beams[18], beams[19], beams[27], beams[24]], nodes=[ne, ne, ne, ne, 0])
+
+    frame.add_acc(np.array([0, 0, -9.81 * 40, 0, 0, 0]))
+
+    solution = frame.solve()
+
+    return solution.mass * 1E-1
+
+
+
+def con(x):
+
+    frame = pf.Frame()
+    beams = []
+
+    for i in range(28):
+        thickness = np.abs(x[i] / 50)
         beam_radius = np.ones(n - 1) * radius[i]
         cs = pf.CSTube(radius=beam_radius, thickness=thickness)
         beam = pf.Beam(name='beam_'+str(i), mesh=meshes[i, :, :], material=aluminum, cs=cs)
@@ -30,17 +71,15 @@ def fun(x):
         beams.append(beam)
         frame.add_beam(beam)
 
-    # foot joints
+
     frame.add_joint(members=[beams[0], beams[1], beams[2]], nodes=[0, 0, 0])
     frame.add_joint(members=[beams[3], beams[4], beams[5]], nodes=[0, 0, 0])
     frame.add_joint(members=[beams[6], beams[7], beams[8]], nodes=[0, 0, 0])
     frame.add_joint(members=[beams[9], beams[10], beams[11]], nodes=[0, 0, 0])
-    # middle outside joints
     frame.add_joint(members=[beams[1], beams[3], beams[13], beams[14], beams[20], beams[21]], nodes=[ne, ne, 0, 0, ne, 0])
     frame.add_joint(members=[beams[4], beams[6], beams[15], beams[17], beams[21], beams[22]], nodes=[ne, ne, 0, 0, ne, 0])
     frame.add_joint(members=[beams[7], beams[9], beams[16], beams[18], beams[22], beams[23]], nodes=[ne, ne, 0, 0, ne, 0])
     frame.add_joint(members=[beams[10], beams[0], beams[12], beams[19], beams[20], beams[23]], nodes=[ne, ne, 0, 0, 0, ne])
-    # leg strut attach joints
     frame.add_joint(members=[beams[2], beams[12], beams[13], beams[24], beams[25]], nodes=[ne, ne, ne, ne, 0])
     frame.add_joint(members=[beams[5], beams[14], beams[15], beams[25], beams[26]], nodes=[ne, ne, ne, ne, 0])
     frame.add_joint(members=[beams[8], beams[16], beams[17], beams[26], beams[27]], nodes=[ne, ne, ne, ne, 0])
@@ -50,13 +89,26 @@ def fun(x):
 
     solution = frame.solve()
 
-    return solution.mass * 1E-2
+    stress = np.zeros((28, n - 1))
+    for i in range(28):
+        stress[i, :] = solution.stress['beam_'+str(i)]
+
+    stress = stress.flatten() * 1E-6
+    print(np.max(stress))
+
+    limit = 60
+    return (limit - stress) / 100
 
 
 
-x0 = np.ones(28) * 0.001
+# x0 = np.ones(28) * 0.001
+x0 = np.ones(28) * 0.01
+bnds = ((0.001, 0.015),) * 28
 
-con = LinearConstraint(np.eye(28), 0.0005, radius)
-
-res = minimize(fun, x0, method='SLSQP', options={'ftol': 1e-4, 'disp': True}, constraints=[con])
+res = minimize(fun, 
+               x0, 
+               method='SLSQP', 
+               options={'ftol': 1e-4, 'disp': True, 'maxiter': 50}, 
+               bounds=bnds, 
+               constraints={'type': 'ineq', 'fun': con})
 print(res.x)

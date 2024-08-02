@@ -2,16 +2,16 @@ import numpy as np
 import pyframe as pf
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
+import csdl_alpha as csdl
 
-
-class Frame:
+class CSDLFrame:
     def __init__(self):
 
         self.beams = []
         self.joints = []
         self.acc = None
 
-    def add_beam(self, beam:'pf.Beam'):
+    def add_beam(self, beam:'pf.CSDLBeam'):
 
         self.beams.append(beam)
 
@@ -77,8 +77,8 @@ class Frame:
         
         # create the global stiffness matrix
         # and the global mass matrix
-        K = np.zeros((dim, dim))
-        M = np.zeros((dim, dim))
+        K = csdl.Variable(value=np.zeros((dim, dim)))
+        M = csdl.Variable(value=np.zeros((dim, dim)))
 
         for beam in self.beams:
             transforms = beam._transforms()
@@ -94,45 +94,45 @@ class Frame:
                 mass_matrix = transformed_mass_matrices[i]
                 idxa, idxb = map[i], map[i+1]
 
-                K[idxa:idxa+6, idxa:idxa+6] += stiffness[:6, :6]
-                K[idxa:idxa+6, idxb:idxb+6] += stiffness[:6, 6:]
-                K[idxb:idxb+6, idxa:idxa+6] += stiffness[6:, :6]
-                K[idxb:idxb+6, idxb:idxb+6] += stiffness[6:, 6:]
+                K = K.set(csdl.slice[idxa:idxa+6, idxa:idxa+6], K[idxa:idxa+6, idxa:idxa+6] + stiffness[:6, :6])
+                K = K.set(csdl.slice[idxa:idxa+6, idxb:idxb+6], K[idxa:idxa+6, idxb:idxb+6] + stiffness[:6, 6:])
+                K = K.set(csdl.slice[idxb:idxb+6, idxa:idxa+6], K[idxb:idxb+6, idxa:idxa+6] + stiffness[6:, :6])
+                K = K.set(csdl.slice[idxb:idxb+6, idxb:idxb+6], K[idxb:idxb+6, idxb:idxb+6] + stiffness[6:, 6:])
 
-                M[idxa:idxa+6, idxa:idxa+6] += mass_matrix[:6, :6]
-                M[idxa:idxa+6, idxb:idxb+6] += mass_matrix[:6, 6:]
-                M[idxb:idxb+6, idxa:idxa+6] += mass_matrix[6:, :6]
-                M[idxb:idxb+6, idxb:idxb+6] += mass_matrix[6:, 6:]
+                M = M.set(csdl.slice[idxa:idxa+6, idxa:idxa+6], M[idxa:idxa+6, idxa:idxa+6] + mass_matrix[:6, :6])
+                M = M.set(csdl.slice[idxa:idxa+6, idxb:idxb+6], M[idxa:idxa+6, idxb:idxb+6] + mass_matrix[:6, 6:])
+                M = M.set(csdl.slice[idxb:idxb+6, idxa:idxa+6], M[idxb:idxb+6, idxa:idxa+6] + mass_matrix[6:, :6])
+                M = M.set(csdl.slice[idxb:idxb+6, idxb:idxb+6], M[idxb:idxb+6, idxb:idxb+6] + mass_matrix[6:, 6:])
 
-        # maybe this is a speedup
-        M = sp.csr_matrix(M)
 
         # # assemble te global loads vector
-        F = np.zeros((dim))
+        F = csdl.Variable(value=np.zeros((dim)))
         for beam in self.beams:
             loads = beam.loads
             map = beam.map
 
             for i in range(beam.num_nodes):
                 idx = map[i]
-                F[idx:idx+6] += loads[i, :]
+                F = F.set(csdl.slice[idx:idx+6], F[idx:idx+6] + loads[i, :])
 
         
         # add any inertial loads
-        if self.acc is not None:
-            expanded_acc = np.tile(self.acc, num)
-            primary_inertial_loads = M @ expanded_acc
+        acc = self.acc
+        if acc is not None:
+            # expanded_acc = np.tile(self.acc, num)
+            expanded_acc = csdl.expand(acc, (num, 6), action='i->ji').flatten()
+            primary_inertial_loads = csdl.matvec(M, expanded_acc)
             F += primary_inertial_loads
 
             # added inertial masses are resolved as loads
             for beam in self.beams:
                 extra_mass = beam.extra_inertial_mass
-                extra_inertial_loads = np.outer(extra_mass, self.acc)
+                extra_inertial_loads = csdl.outer(extra_mass, acc)
                 map = beam.map
 
                 for i in range(beam.num_nodes):
                     idx = map[i]
-                    F[idx:idx+6] += extra_inertial_loads[i, :]
+                    F = F.set(csdl.slice[idx:idx+6], F[idx:idx+6] + extra_inertial_loads[i, :])
 
 
 
@@ -146,31 +146,31 @@ class Frame:
                 for i in range(6):
                     # if dof[i] == 1:
                         # zero the row/column then put a 1 in the diagonal
-                        K[idx + i, :] = 0
-                        K[:, idx + i] = 0
-                        K[idx + i, idx + i] = 1
+                        K = K.set(csdl.slice[idx + i, :], 0)
+                        K = K.set(csdl.slice[:, idx + i], 0)
+                        K = K.set(csdl.slice[idx + i, idx + i], 1)
 
                         # zero the corresponding load index as well
-                        F[idx + i] = 0
+                        F = F.set(csdl.slice[idx + i], 0)
 
 
 
         # solve the system of equations
-        # U = np.linalg.solve(K, F)
-        K = sp.csr_matrix(K)
-        U = spla.spsolve(K, F)
+        U = csdl.solve_linear(K, F)
+        # K = sp.csr_matrix(K)
+        # U = spla.spsolve(K, F)
 
 
         # find the displacements
         displacement = {}
         for beam in self.beams:
-            displacement[beam.name] = np.zeros((beam.num_nodes, 3))
+            displacement[beam.name] = csdl.Variable(value=np.zeros((beam.num_nodes, 3)))
             map = beam.map
 
             for i in range(beam.num_nodes):
                 idx = map[i]
                 # extract the (x, y, z) nodal displacement
-                displacement[beam.name][i, :] = U[idx:idx+3]
+                displacement[beam.name] = displacement[beam.name].set(csdl.slice[i, :], U[idx:idx+3])
 
 
         # calculate the elemental loads and stresses
@@ -178,11 +178,8 @@ class Frame:
         for beam in self.beams:
             # elemental loads
             element_loads = beam._recover_loads(U)
-            element_loads = np.vstack(element_loads)
+            element_loads = csdl.vstack(element_loads)
             # perform a stress recovery
-            # beam_stress = np.zeros((beam.num_elements))
-            # for i in range(beam.num_elements):
-            #     beam_stress[i] = beam.cs.stress(element_loads[i], i)
             beam_stress = beam.cs.stress(element_loads)
 
             stress[beam.name] = beam_stress
