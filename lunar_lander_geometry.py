@@ -63,7 +63,7 @@ radius = np.array([sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, sr, s
 
 
 
-nodes_per_edge = 12
+nodes_per_edge = 6
 meshes = af.mesh_from_points_and_edges(points, edges, nodes_per_edge)
 
 

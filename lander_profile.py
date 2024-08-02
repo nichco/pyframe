@@ -24,8 +24,8 @@ for i in range(28):
     cs = pf.CSTube(radius=beam_radius, thickness=thickness)
     beam = pf.Beam(name='beam_'+str(i), mesh=meshes[i, :, :], material=aluminum, cs=cs)
 
-    # if i in [0, 4, 6, 10]: # fix the feet
-    beam.fix(0)
+    if i in [0, 4, 6, 10]: # fix the feet
+        beam.fix(0)
 
     if i in [20, 21, 22, 23]: # add mass to bottom frame
         beam.add_inertial_mass(100, 0)
