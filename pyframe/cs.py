@@ -62,13 +62,13 @@ class CSTube:
         axial_stress = F_x / self.area
         shear_stress = M_x * self.radius / self.ix
 
-        max_moment = (M_y**2 + M_z**2 + 1E-12)**0.5
+        max_moment = np.sqrt(M_y**2 + M_z**2 + 1E-12)
         bending_stress = max_moment * self.radius / self.iy
 
         tensile_stress = axial_stress + bending_stress
 
         eps = 1E-12
-        von_mises_stress = (tensile_stress**2 + 3*shear_stress**2 + eps)**0.5
+        von_mises_stress = np.sqrt(tensile_stress**2 + 3*shear_stress**2 + eps)
 
         
         return von_mises_stress

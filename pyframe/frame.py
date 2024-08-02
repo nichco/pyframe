@@ -1,6 +1,8 @@
 import numpy as np
 import pyframe as pf
-
+import scipy.sparse as sp
+import scipy.sparse.linalg as spla
+from scipy.sparse import lil_matrix
 
 class Frame:
     def __init__(self):
@@ -26,18 +28,10 @@ class Frame:
             self.acc = acc
         else:
             raise ValueError("acc is not None")
+        
+    
+    def _utils(self):
 
-
-    def solve(self):
-
-        # fill in the node maps for all beams
-        # as if there are no joints
-        # idx = 0
-        # for beam in self.beams:
-        #     for i in range(beam.num_nodes):
-        #         beam.map.append(idx)
-        #         idx += 1
-        # a faster version of the above code
         idx = 0
         for beam in self.beams:
             beam.map.extend(range(idx, idx + beam.num_nodes))
@@ -53,7 +47,6 @@ class Frame:
                 if i != 0:
                     member.map[nodes[i]] = index
 
-
         # nodes = set()
         # for beam in self.beams:
         #     for i in range(beam.num_nodes):
@@ -63,9 +56,10 @@ class Frame:
         
         # the global dimension is the number of unique nodes times
         # the degrees of freedom per node
-        dim = len(nodes) * 6
+        num = len(nodes)
+        dim = num * 6
 
-        helper = {list(nodes)[i]: i for i in range(len(nodes))}
+        helper = {node: i for i, node in enumerate(nodes)}
 
         for beam in self.beams:
             map = beam.map
@@ -73,6 +67,12 @@ class Frame:
             for i in range(beam.num_nodes):
                 map[i] = helper[map[i]] * 6
 
+        return dim, num
+
+
+    def solve(self):
+
+        dim, num = self._utils()
         
         
         # create the global stiffness matrix
@@ -104,8 +104,10 @@ class Frame:
                 M[idxb:idxb+6, idxa:idxa+6] += mass_matrix[6:, :6]
                 M[idxb:idxb+6, idxb:idxb+6] += mass_matrix[6:, 6:]
 
+        # maybe this is a speedup
+        M = sp.csr_matrix(M)
 
-        # assemble te global loads vector
+        # # assemble te global loads vector
         F = np.zeros((dim))
         for beam in self.beams:
             loads = beam.loads
@@ -118,7 +120,7 @@ class Frame:
         
         # add any inertial loads
         if self.acc is not None:
-            expanded_acc = np.tile(self.acc, len(nodes))
+            expanded_acc = np.tile(self.acc, num)
             primary_inertial_loads = M @ expanded_acc
             F += primary_inertial_loads
 
@@ -154,7 +156,9 @@ class Frame:
 
 
         # solve the system of equations
-        U = np.linalg.solve(K, F)
+        # U = np.linalg.solve(K, F)
+        K = sp.csr_matrix(K)
+        U = spla.spsolve(K, F)
 
 
         # find the displacements

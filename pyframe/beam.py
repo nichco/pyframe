@@ -23,12 +23,14 @@ class Beam:
         self.boundary_conditions = []
 
         # map the beam nodes to the global indices
-        # self.map = np.zeros(self.num_nodes, dtype=int)
         self.map = []
 
         # storage
         self.local_stiffness_bookshelf = None
         self.transformations_bookshelf = None
+
+        # precompute lengths
+        self.lengths = self._lengths(mesh)
 
     def fix(self, node):
 
@@ -51,14 +53,17 @@ class Beam:
 
     #     return lengths
     
-    def _lengths(self):
-        # Compute the differences between consecutive points in the mesh
-        diffs = self.mesh[1:] - self.mesh[:-1]
+    def _lengths(self, mesh):
         # Compute the squared differences
-        squared_diffs = diffs ** 2
+        squared_diffs = (mesh[1:] - mesh[:-1]) ** 2
         # Sum the squared differences along the rows and take the square root
         lengths = np.sqrt(np.sum(squared_diffs, axis=1))
         return lengths
+
+    # def _lengths(self):
+    #     lengths = [np.linalg.norm(self.mesh[i+1] - self.mesh[i]) for i in range(self.num_elements)]
+    #     return np.array(lengths)
+
         
     def _local_stiffness_matrices(self):
 
@@ -67,56 +72,58 @@ class Beam:
         Iz = self.cs.iz
         Iy = self.cs.iy
         J = self.cs.ix
-        L = self._lengths()
+        L = self.lengths
 
         local_stiffness = np.zeros((self.num_elements, 12, 12))
 
         # pre-computations for speed
-        L3 = L**3
-        L2 = L**2
         EIy = E*Iy
         EIz = E*Iz
+        EIzL3 = EIz/L**3
+        EIzL2 = EIz/L**2
+        EIyL3 = EIy/L**3
+        EIyL2 = EIy/L**2
 
         local_stiffness[:, 0, 0] = A*E/L
-        local_stiffness[:, 1, 1] = 12*EIz/L3
-        local_stiffness[:, 1, 5] = 6*EIz/L2
-        local_stiffness[:, 5, 1] = 6*EIz/L2
-        local_stiffness[:, 2, 2] = 12*EIy/L3
-        local_stiffness[:, 2, 4] = -6*EIy/L2
-        local_stiffness[:, 4, 2] = -6*EIy/L2
+        local_stiffness[:, 1, 1] = 12*EIzL3
+        local_stiffness[:, 1, 5] = 6*EIzL2
+        local_stiffness[:, 5, 1] = 6*EIzL2
+        local_stiffness[:, 2, 2] = 12*EIyL3
+        local_stiffness[:, 2, 4] = -6*EIyL2
+        local_stiffness[:, 4, 2] = -6*EIyL2
         local_stiffness[:, 3, 3] = G*J/L
         local_stiffness[:, 4, 4] = 4*EIy/L
         local_stiffness[:, 5, 5] = 4*EIz/L
 
         local_stiffness[:, 0, 6] = -A*E/L
-        local_stiffness[:, 1, 7] = -12*EIz/L3
-        local_stiffness[:, 1, 11] = 6*EIz/L2
-        local_stiffness[:, 2, 8] = -12*EIy/L3
-        local_stiffness[:, 2, 10] = -6*EIy/L2
+        local_stiffness[:, 1, 7] = -12*EIzL3
+        local_stiffness[:, 1, 11] = 6*EIzL2
+        local_stiffness[:, 2, 8] = -12*EIyL3
+        local_stiffness[:, 2, 10] = -6*EIyL2
         local_stiffness[:, 3, 9] = -G*J/L
-        local_stiffness[:, 4, 8] = 6*EIy/L2
+        local_stiffness[:, 4, 8] = 6*EIyL2
         local_stiffness[:, 4, 10] = 2*EIy/L
-        local_stiffness[:, 5, 7] = -6*EIz/L2
+        local_stiffness[:, 5, 7] = -6*EIzL2
         local_stiffness[:, 5, 11] = 2*EIz/L
 
         local_stiffness[:, 6, 0] = -A*E/L
-        local_stiffness[:, 7, 1] = -12*EIz/L3
-        local_stiffness[:, 7, 5] = -6*EIz/L2
-        local_stiffness[:, 8, 2] = -12*EIy/L3
-        local_stiffness[:, 8, 4] = 6*EIy/L2
+        local_stiffness[:, 7, 1] = -12*EIzL3
+        local_stiffness[:, 7, 5] = -6*EIzL2
+        local_stiffness[:, 8, 2] = -12*EIyL3
+        local_stiffness[:, 8, 4] = 6*EIyL2
         local_stiffness[:, 9, 3] = -G*J/L
-        local_stiffness[:, 10, 2] = -6*EIy/L2
+        local_stiffness[:, 10, 2] = -6*EIyL2
         local_stiffness[:, 10, 4] = 2*EIy/L
-        local_stiffness[:, 11, 1] = 6*EIz/L2
+        local_stiffness[:, 11, 1] = 6*EIzL2
         local_stiffness[:, 11, 5] = 2*EIz/L
 
         local_stiffness[:, 6, 6] = A*E/L
-        local_stiffness[:, 7, 7] = 12*EIz/L3
-        local_stiffness[:, 7, 11] = -6*EIz/L2
-        local_stiffness[:, 11, 7] = -6*EIz/L2
-        local_stiffness[:, 8, 8] = 12*EIy/L3
-        local_stiffness[:, 8, 10] = 6*EIy/L2
-        local_stiffness[:, 10, 8] = 6*EIy/L2
+        local_stiffness[:, 7, 7] = 12*EIzL3
+        local_stiffness[:, 7, 11] = -6*EIzL2
+        local_stiffness[:, 11, 7] = -6*EIzL2
+        local_stiffness[:, 8, 8] = 12*EIyL3
+        local_stiffness[:, 8, 10] = 6*EIyL2
+        local_stiffness[:, 10, 8] = 6*EIyL2
         local_stiffness[:, 9, 9] = G*J/L
         local_stiffness[:, 10, 10] = 4*EIy/L
         local_stiffness[:, 11, 11] = 4*EIz/L
@@ -130,11 +137,11 @@ class Beam:
         A = self.cs.area
         rho = self.material.density
         J = self.cs.ix
-        L = self._lengths()
+        L = self.lengths
 
         # coefficients
         aa = L / 2
-        coef = rho * A * aa /105
+        coef = rho * A * aa / 105
         rx2 = J / A
 
         local_mass = np.zeros((self.num_elements, 12, 12))
@@ -188,7 +195,7 @@ class Beam:
 
         transforms = []
         
-        lengths = self._lengths()
+        lengths = self.lengths
         T = np.zeros((12, 12))
 
         for i in range(self.num_elements):
@@ -211,7 +218,6 @@ class Beam:
                 block[2, 1] = -mm * nn / D
                 block[2, 2] = D
 
-            # T = np.zeros((12, 12))
             T[0:3, 0:3] = block
             T[3:6, 3:6] = block
             T[6:9, 6:9] = block
@@ -255,16 +261,19 @@ class Beam:
 
     def _recover_loads(self, U):
 
+        map = self.map
         loads = []
         displacement = np.zeros((12))
+        lsb = self.local_stiffness_bookshelf
+        tb = self.transformations_bookshelf
 
         for i in range(self.num_elements):
-            idxa, idxb = self.map[i], self.map[i+1]
+            idxa, idxb = map[i], map[i+1]
             displacement[0:6] = U[idxa:idxa+6]
             displacement[6:12] = U[idxb:idxb+6]
 
-            local_stiffness = self.local_stiffness_bookshelf[i, :, :] # matrix
-            T = self.transformations_bookshelf[i] # list of matrices
+            local_stiffness = lsb[i, :, :] # matrix
+            T = tb[i] # list of matrices
 
             loads.append(local_stiffness @ T @ displacement)
 
@@ -273,7 +282,7 @@ class Beam:
 
     def _mass(self):
 
-        lengths = self._lengths()
+        lengths = self.lengths
         rho = self.material.density
         area = self.cs.area
 

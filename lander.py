@@ -81,7 +81,7 @@ import pstats
 
 p = pstats.Stats('profile_data')
 # p.sort_stats(SortKey.CUMULATIVE).print_stats(20)
-p.sort_stats(SortKey.TIME).print_stats(20)
+p.sort_stats(SortKey.TIME).print_stats(25)
 
 # 4986 function calls (4930 primitive calls) in 0.096 seconds
 # 0.08944296836853027
