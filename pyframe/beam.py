@@ -71,49 +71,55 @@ class Beam:
 
         local_stiffness = np.zeros((self.num_elements, 12, 12))
 
+        # pre-computations for speed
+        L3 = L**3
+        L2 = L**2
+        EIy = E*Iy
+        EIz = E*Iz
+
         local_stiffness[:, 0, 0] = A*E/L
-        local_stiffness[:, 1, 1] = 12*E*Iz/L**3
-        local_stiffness[:, 1, 5] = 6*E*Iz/L**2
-        local_stiffness[:, 5, 1] = 6*E*Iz/L**2
-        local_stiffness[:, 2, 2] = 12*E*Iy/L**3
-        local_stiffness[:, 2, 4] = -6*E*Iy/L**2
-        local_stiffness[:, 4, 2] = -6*E*Iy/L**2
+        local_stiffness[:, 1, 1] = 12*EIz/L3
+        local_stiffness[:, 1, 5] = 6*EIz/L2
+        local_stiffness[:, 5, 1] = 6*EIz/L2
+        local_stiffness[:, 2, 2] = 12*EIy/L3
+        local_stiffness[:, 2, 4] = -6*EIy/L2
+        local_stiffness[:, 4, 2] = -6*EIy/L2
         local_stiffness[:, 3, 3] = G*J/L
-        local_stiffness[:, 4, 4] = 4*E*Iy/L
-        local_stiffness[:, 5, 5] = 4*E*Iz/L
+        local_stiffness[:, 4, 4] = 4*EIy/L
+        local_stiffness[:, 5, 5] = 4*EIz/L
 
         local_stiffness[:, 0, 6] = -A*E/L
-        local_stiffness[:, 1, 7] = -12*E*Iz/L**3
-        local_stiffness[:, 1, 11] = 6*E*Iz/L**2
-        local_stiffness[:, 2, 8] = -12*E*Iy/L**3
-        local_stiffness[:, 2, 10] = -6*E*Iy/L**2
+        local_stiffness[:, 1, 7] = -12*EIz/L3
+        local_stiffness[:, 1, 11] = 6*EIz/L2
+        local_stiffness[:, 2, 8] = -12*EIy/L3
+        local_stiffness[:, 2, 10] = -6*EIy/L2
         local_stiffness[:, 3, 9] = -G*J/L
-        local_stiffness[:, 4, 8] = 6*E*Iy/L**2
-        local_stiffness[:, 4, 10] = 2*E*Iy/L
-        local_stiffness[:, 5, 7] = -6*E*Iz/L**2
-        local_stiffness[:, 5, 11] = 2*E*Iz/L
+        local_stiffness[:, 4, 8] = 6*EIy/L2
+        local_stiffness[:, 4, 10] = 2*EIy/L
+        local_stiffness[:, 5, 7] = -6*EIz/L2
+        local_stiffness[:, 5, 11] = 2*EIz/L
 
         local_stiffness[:, 6, 0] = -A*E/L
-        local_stiffness[:, 7, 1] = -12*E*Iz/L**3
-        local_stiffness[:, 7, 5] = -6*E*Iz/L**2
-        local_stiffness[:, 8, 2] = -12*E*Iy/L**3
-        local_stiffness[:, 8, 4] = 6*E*Iy/L**2
+        local_stiffness[:, 7, 1] = -12*EIz/L3
+        local_stiffness[:, 7, 5] = -6*EIz/L2
+        local_stiffness[:, 8, 2] = -12*EIy/L3
+        local_stiffness[:, 8, 4] = 6*EIy/L2
         local_stiffness[:, 9, 3] = -G*J/L
-        local_stiffness[:, 10, 2] = -6*E*Iy/L**2
-        local_stiffness[:, 10, 4] = 2*E*Iy/L
-        local_stiffness[:, 11, 1] = 6*E*Iz/L**2
-        local_stiffness[:, 11, 5] = 2*E*Iz/L
+        local_stiffness[:, 10, 2] = -6*EIy/L2
+        local_stiffness[:, 10, 4] = 2*EIy/L
+        local_stiffness[:, 11, 1] = 6*EIz/L2
+        local_stiffness[:, 11, 5] = 2*EIz/L
 
         local_stiffness[:, 6, 6] = A*E/L
-        local_stiffness[:, 7, 7] = 12*E*Iz/L**3
-        local_stiffness[:, 7, 11] = -6*E*Iz/L**2
-        local_stiffness[:, 11, 7] = -6*E*Iz/L**2
-        local_stiffness[:, 8, 8] = 12*E*Iy/L**3
-        local_stiffness[:, 8, 10] = 6*E*Iy/L**2
-        local_stiffness[:, 10, 8] = 6*E*Iy/L**2
+        local_stiffness[:, 7, 7] = 12*EIz/L3
+        local_stiffness[:, 7, 11] = -6*EIz/L2
+        local_stiffness[:, 11, 7] = -6*EIz/L2
+        local_stiffness[:, 8, 8] = 12*EIy/L3
+        local_stiffness[:, 8, 10] = 6*EIy/L2
+        local_stiffness[:, 10, 8] = 6*EIy/L2
         local_stiffness[:, 9, 9] = G*J/L
-        local_stiffness[:, 10, 10] = 4*E*Iy/L
-        local_stiffness[:, 11, 11] = 4*E*Iz/L
+        local_stiffness[:, 10, 10] = 4*EIy/L
+        local_stiffness[:, 11, 11] = 4*EIz/L
 
         self.local_stiffness_bookshelf = local_stiffness
 
@@ -250,10 +256,10 @@ class Beam:
     def _recover_loads(self, U):
 
         loads = []
-        
+        displacement = np.zeros((12))
+
         for i in range(self.num_elements):
             idxa, idxb = self.map[i], self.map[i+1]
-            displacement = np.zeros((12))
             displacement[0:6] = U[idxa:idxa+6]
             displacement[6:12] = U[idxb:idxb+6]
 
