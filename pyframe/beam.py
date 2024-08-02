@@ -23,7 +23,7 @@ class Beam:
         self.boundary_conditions = []
 
         # map the beam nodes to the global indices
-        self.map = []
+        self.map = np.zeros(self.num_nodes, dtype=int)
 
         # storage
         self.local_stiffness_bookshelf = None

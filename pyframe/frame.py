@@ -32,20 +32,23 @@ class Frame:
     def solve(self):
 
         # fill in the node maps for all beams
+        # as if there are no joints
         idx = 0
         for beam in self.beams:
             for i in range(beam.num_nodes):
-                beam.map.append(idx)
-                idx += 6
+                beam.map[i] = idx
+                idx += 1
 
         # re-assign joint nodes
         for joint in self.joints:
             members = joint['members']
             nodes = joint['nodes']
+            index = members[0].map[nodes[0]]
 
-            # every joint node gets the index of the node in the first joint member
-            for i, member in enumerate(members[1:]):
-                member.map[nodes[i]] = members[0].map[nodes[0]]
+            for i, member in enumerate(members):
+                if i != 0:
+                    member.map[nodes[i]] = index
+
 
         nodes = set()
         for beam in self.beams:
@@ -55,6 +58,16 @@ class Frame:
         # the global dimension is the number of unique nodes times
         # the degrees of freedom per node
         dim = len(nodes) * 6
+
+        helper = {list(nodes)[i]: i for i in range(len(nodes))}
+
+        for beam in self.beams:
+            map = beam.map
+            
+            for i in range(beam.num_nodes):
+                map[i] = helper[map[i]] * 6
+
+        
         
         # create the global stiffness matrix
         # and the global mass matrix
@@ -73,6 +86,19 @@ class Frame:
                 stiffness = transformed_stiffness_matrices[i]
                 mass_matrix = transformed_mass_matrices[i]
                 idxa, idxb = map[i], map[i+1]
+
+                # print('************************************')
+                # print('stiffness shape: ', stiffness.shape)
+                # print('stiffness sub shape: ', stiffness[:6, 6:].shape)
+                # print('K sub shape: ', K[idxa:idxa+6, idxb:idxb+6].shape)
+                # print(beam.name)
+                # print('idxa: ', idxa)
+                # print('idxb: ', idxb)
+                # print('dim: ', dim)
+                # print(beam.map)
+                #so there's an index error or something
+
+                
 
                 K[idxa:idxa+6, idxa:idxa+6] += stiffness[:6, :6]
                 K[idxa:idxa+6, idxb:idxb+6] += stiffness[:6, 6:]
