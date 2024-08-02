@@ -2,7 +2,6 @@ import numpy as np
 import pyframe as pf
 
 
-
 class Frame:
     def __init__(self):
 
@@ -33,11 +32,16 @@ class Frame:
 
         # fill in the node maps for all beams
         # as if there are no joints
+        # idx = 0
+        # for beam in self.beams:
+        #     for i in range(beam.num_nodes):
+        #         beam.map.append(idx)
+        #         idx += 1
+        # a faster version of the above code
         idx = 0
         for beam in self.beams:
-            for i in range(beam.num_nodes):
-                beam.map[i] = idx
-                idx += 1
+            beam.map.extend(range(idx, idx + beam.num_nodes))
+            idx += beam.num_nodes
 
         # re-assign joint nodes
         for joint in self.joints:
@@ -50,10 +54,12 @@ class Frame:
                     member.map[nodes[i]] = index
 
 
-        nodes = set()
-        for beam in self.beams:
-            for i in range(beam.num_nodes):
-                nodes.add(beam.map[i])
+        # nodes = set()
+        # for beam in self.beams:
+        #     for i in range(beam.num_nodes):
+        #         nodes.add(beam.map[i])
+        # a faster version of the above code
+        nodes = {node for beam in self.beams for node in beam.map[:beam.num_nodes]}
         
         # the global dimension is the number of unique nodes times
         # the degrees of freedom per node
@@ -75,9 +81,10 @@ class Frame:
         M = np.zeros((dim, dim))
 
         for beam in self.beams:
+            transforms = beam._transforms()
             # lists of stiffness matrices for each element in the global frame
-            transformed_stiffness_matrices = beam._transform_stiffness_matrices()
-            transformed_mass_matrices = beam._transform_mass_matrices()
+            transformed_stiffness_matrices = beam._transform_stiffness_matrices(transforms)
+            transformed_mass_matrices = beam._transform_mass_matrices(transforms)
             # add the elemental stiffness/mass matrices to their locations in the 
             # global stiffness/mass matrix
             map = beam.map
@@ -86,19 +93,6 @@ class Frame:
                 stiffness = transformed_stiffness_matrices[i]
                 mass_matrix = transformed_mass_matrices[i]
                 idxa, idxb = map[i], map[i+1]
-
-                # print('************************************')
-                # print('stiffness shape: ', stiffness.shape)
-                # print('stiffness sub shape: ', stiffness[:6, 6:].shape)
-                # print('K sub shape: ', K[idxa:idxa+6, idxb:idxb+6].shape)
-                # print(beam.name)
-                # print('idxa: ', idxa)
-                # print('idxb: ', idxb)
-                # print('dim: ', dim)
-                # print(beam.map)
-                #so there's an index error or something
-
-                
 
                 K[idxa:idxa+6, idxa:idxa+6] += stiffness[:6, :6]
                 K[idxa:idxa+6, idxb:idxb+6] += stiffness[:6, 6:]
@@ -132,9 +126,10 @@ class Frame:
             for beam in self.beams:
                 extra_mass = beam.extra_inertial_mass
                 extra_inertial_loads = np.outer(extra_mass, self.acc)
+                map = beam.map
 
                 for i in range(beam.num_nodes):
-                    idx = beam.map[i]
+                    idx = map[i]
                     F[idx:idx+6] += extra_inertial_loads[i, :]
 
 
@@ -142,8 +137,9 @@ class Frame:
 
         # apply boundary conditions
         for beam in self.beams:
+            map = beam.map
             for node in beam.boundary_conditions:
-                idx = beam.map[node]
+                idx = map[node]
 
                 for i in range(6):
                     # if dof[i] == 1:
@@ -165,9 +161,10 @@ class Frame:
         displacement = {}
         for beam in self.beams:
             displacement[beam.name] = np.zeros((beam.num_nodes, 3))
+            map = beam.map
 
             for i in range(beam.num_nodes):
-                idx = beam.map[i]
+                idx = map[i]
                 # extract the (x, y, z) nodal displacement
                 displacement[beam.name][i, :] = U[idx:idx+3]
 
@@ -177,10 +174,12 @@ class Frame:
         for beam in self.beams:
             # elemental loads
             element_loads = beam._recover_loads(U)
+            element_loads = np.vstack(element_loads)
             # perform a stress recovery
-            beam_stress = np.zeros((beam.num_elements))
-            for i in range(beam.num_elements):
-                beam_stress[i] = beam.cs.stress(element_loads[i], i)
+            # beam_stress = np.zeros((beam.num_elements))
+            # for i in range(beam.num_elements):
+            #     beam_stress[i] = beam.cs.stress(element_loads[i], i)
+            beam_stress = beam.cs.stress(element_loads)
 
             stress[beam.name] = beam_stress
 

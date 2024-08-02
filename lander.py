@@ -2,6 +2,8 @@ import numpy as np
 import pyframe as pf
 import pyvista as pv
 import pickle
+import cProfile
+from pstats import SortKey
 import tracemalloc
 tracemalloc.start()
 
@@ -55,9 +57,34 @@ frame.add_joint(members=[beams[8], beams[16], beams[17], beams[26], beams[27]], 
 frame.add_joint(members=[beams[11], beams[18], beams[19], beams[27], beams[24]], nodes=[ne, ne, ne, ne, 0])
 
 
-solution = frame.solve()
 
+acc = np.array([0, 0, -9.81 * 40, 0, 0, 0])
+frame.add_acc(acc)
 
+import time
+# t1 = time.time()
+# solution = frame.solve()
+# t2 = time.time()
+# print(t2 - t1)
+
+# exit()
+def solve():
+    t1 = time.time()
+    solution = frame.solve()
+    t2 = time.time()
+    print('time: ', t2 - t1)
+    return solution
+
+cProfile.run('solve()', 'profile_data')
+
+import pstats
+
+p = pstats.Stats('profile_data')
+# p.sort_stats(SortKey.CUMULATIVE).print_stats(20)
+p.sort_stats(SortKey.TIME).print_stats(20)
+
+# 4986 function calls (4930 primitive calls) in 0.096 seconds
+# 0.08944296836853027
 
 
 
@@ -71,12 +98,12 @@ plotter = pv.Plotter()
 
 for i, beam in enumerate(frame.beams):
     mesh0 = beam.mesh
-    disp = solution.get_displacement(beam)
+    disp = solution.displacement[beam.name]
     mesh1 = mesh0 + 20 * disp
 
-    radius = beam.cs.radius.value
+    radius = beam.cs.radius
 
-    stress = solution.get_stress(beam).value
+    stress = solution.stress[beam.name]
 
     # af.plot_mesh(plotter, mesh0, color='lightblue', line_width=10)
     # plot_mesh(plotter, mesh1, cell_data=stress, cmap='viridis', line_width=20)

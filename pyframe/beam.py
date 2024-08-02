@@ -23,7 +23,8 @@ class Beam:
         self.boundary_conditions = []
 
         # map the beam nodes to the global indices
-        self.map = np.zeros(self.num_nodes, dtype=int)
+        # self.map = np.zeros(self.num_nodes, dtype=int)
+        self.map = []
 
         # storage
         self.local_stiffness_bookshelf = None
@@ -42,21 +43,30 @@ class Beam:
     def add_load(self, load):
         self.loads += load
 
-    def _lengths(self):
+    # def _lengths(self):
 
-        lengths = np.zeros(self.num_elements)
-        for i in range(self.num_elements):
-            lengths[i] = np.linalg.norm(self.mesh[i+1] - self.mesh[i])
+    #     lengths = np.zeros(self.num_elements)
+    #     for i in range(self.num_elements):
+    #         lengths[i] = np.linalg.norm(self.mesh[i+1] - self.mesh[i])
 
-        return lengths
+    #     return lengths
     
+    def _lengths(self):
+        # Compute the differences between consecutive points in the mesh
+        diffs = self.mesh[1:] - self.mesh[:-1]
+        # Compute the squared differences
+        squared_diffs = diffs ** 2
+        # Sum the squared differences along the rows and take the square root
+        lengths = np.sqrt(np.sum(squared_diffs, axis=1))
+        return lengths
+        
     def _local_stiffness_matrices(self):
 
-        A = self.cs.area()
+        A = self.cs.area
         E, G = self.material.E, self.material.G
-        Iz = self.cs.iz()
-        Iy = self.cs.iy()
-        J = self.cs.ix()
+        Iz = self.cs.iz
+        Iy = self.cs.iy
+        J = self.cs.ix
         L = self._lengths()
 
         local_stiffness = np.zeros((self.num_elements, 12, 12))
@@ -111,9 +121,9 @@ class Beam:
     
     def _local_mass_matrices(self):
         
-        A = self.cs.area()
+        A = self.cs.area
         rho = self.material.density
-        J = self.cs.ix()
+        J = self.cs.ix
         L = self._lengths()
 
         # coefficients
@@ -173,6 +183,7 @@ class Beam:
         transforms = []
         
         lengths = self._lengths()
+        T = np.zeros((12, 12))
 
         for i in range(self.num_elements):
             cp = (self.mesh[i + 1, :] - self.mesh[i, :]) / lengths[i]
@@ -194,7 +205,7 @@ class Beam:
                 block[2, 1] = -mm * nn / D
                 block[2, 2] = D
 
-            T = np.zeros((12, 12))
+            # T = np.zeros((12, 12))
             T[0:3, 0:3] = block
             T[3:6, 3:6] = block
             T[6:9, 6:9] = block
@@ -206,9 +217,8 @@ class Beam:
 
         return transforms
 
-    def _transform_stiffness_matrices(self):
+    def _transform_stiffness_matrices(self, transforms):
         
-        transforms = self._transforms()
         local_stiffness_matrices = self._local_stiffness_matrices()
 
         transformed_stiffness_matrices = []
@@ -222,9 +232,8 @@ class Beam:
         return transformed_stiffness_matrices
     
 
-    def _transform_mass_matrices(self):
+    def _transform_mass_matrices(self, transforms):
 
-        transforms = self._transforms()
         local_mass_matrices = self._local_mass_matrices()
 
         transformed_mass_matrices = []
@@ -260,7 +269,7 @@ class Beam:
 
         lengths = self._lengths()
         rho = self.material.density
-        area = self.cs.area()
+        area = self.cs.area
 
         element_masses = area * lengths * rho
         beam_mass = np.sum(element_masses)
