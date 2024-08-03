@@ -105,15 +105,17 @@ class CSDLFrame:
                 M = M.set(csdl.slice[idxb:idxb+6, idxb:idxb+6], M[idxb:idxb+6, idxb:idxb+6] + mass_matrix[6:, 6:])
 
 
-        # # assemble te global loads vector
+        # assemble the global loads vector
         F = csdl.Variable(value=np.zeros((dim)))
         for beam in self.beams:
-            loads = beam.loads
-            map = beam.map
+            loads = beam.loads # shape: (n, 6)
+            map = beam.map # shape: (n,)
 
-            for i in range(beam.num_nodes):
-                idx = map[i]
-                F = F.set(csdl.slice[idx:idx+6], F[idx:idx+6] + loads[i, :])
+            if loads is not None:
+
+                for i in range(beam.num_nodes):
+                    idx = map[i]
+                    F = F.set(csdl.slice[idx:idx+6], F[idx:idx+6] + loads[i, :])
 
         
         # add any inertial loads
@@ -126,32 +128,36 @@ class CSDLFrame:
 
             # added inertial masses are resolved as loads
             for beam in self.beams:
-                extra_mass = beam.extra_inertial_mass
-                extra_inertial_loads = csdl.outer(extra_mass, acc)
-                map = beam.map
+                # if the beam has extra inertial mass
+                if beam.extra_inertial_mass is not None:
+                    extra_mass = beam.extra_inertial_mass
+                    extra_inertial_loads = csdl.outer(extra_mass, acc)
+                    map = beam.map
 
-                for i in range(beam.num_nodes):
-                    idx = map[i]
-                    F = F.set(csdl.slice[idx:idx+6], F[idx:idx+6] + extra_inertial_loads[i, :])
+                    for i in range(beam.num_nodes):
+                        idx = map[i]
+                        F = F.set(csdl.slice[idx:idx+6], F[idx:idx+6] + extra_inertial_loads[i, :])
 
 
 
 
         # apply boundary conditions
+        indices = []
         for beam in self.beams:
             map = beam.map
+
             for node in beam.boundary_conditions:
                 idx = map[node]
-
                 for i in range(6):
                     # if dof[i] == 1:
-                        # zero the row/column then put a 1 in the diagonal
-                        K = K.set(csdl.slice[idx + i, :], 0)
-                        K = K.set(csdl.slice[:, idx + i], 0)
-                        K = K.set(csdl.slice[idx + i, idx + i], 1)
+                    indices.append(idx + i)
 
-                        # zero the corresponding load index as well
-                        F = F.set(csdl.slice[idx + i], 0)
+        # zero the row/column then put a 1 in the diagonal
+        K = K.set(csdl.slice[indices, :], 0)
+        K = K.set(csdl.slice[:, indices], 0)
+        K = K.set(csdl.slice[indices, indices], 1)
+        # zero the corresponding load index as well
+        F = F.set(csdl.slice[indices], 0)
 
 
 
@@ -167,10 +173,17 @@ class CSDLFrame:
             displacement[beam.name] = csdl.Variable(value=np.zeros((beam.num_nodes, 3)))
             map = beam.map
 
+            map_u_to_d_x, map_u_to_d_y, map_u_to_d_z = [], [], []
             for i in range(beam.num_nodes):
                 idx = map[i]
+                map_u_to_d_x.append(idx)
+                map_u_to_d_y.append(idx + 1)
+                map_u_to_d_z.append(idx + 2)
                 # extract the (x, y, z) nodal displacement
-                displacement[beam.name] = displacement[beam.name].set(csdl.slice[i, :], U[idx:idx+3])
+                # displacement[beam.name] = displacement[beam.name].set(csdl.slice[i, :], U[idx:idx+3])
+
+            reshaped_U = csdl.transpose(csdl.vstack([U[map_u_to_d_x], U[map_u_to_d_y], U[map_u_to_d_z]]))
+            displacement[beam.name] = displacement[beam.name].set(csdl.slice[:, :], reshaped_U)
 
 
         # calculate the elemental loads and stresses
@@ -178,7 +191,7 @@ class CSDLFrame:
         for beam in self.beams:
             # elemental loads
             element_loads = beam._recover_loads(U)
-            element_loads = csdl.vstack(element_loads)
+            # element_loads = csdl.vstack(element_loads)
             # perform a stress recovery
             beam_stress = beam.cs.stress(element_loads)
 
