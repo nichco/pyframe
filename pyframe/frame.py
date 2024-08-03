@@ -68,6 +68,15 @@ class Frame:
                 map[i] = helper[map[i]] * 6
 
         return dim, num
+    
+    def compute_mass(self):
+
+        # mass properties
+        mass = 0
+        for beam in self.beams:
+            mass += beam._mass()
+
+        return mass
 
 
     def solve(self):

@@ -234,13 +234,20 @@ class Beam:
         
         local_stiffness_matrices = self._local_stiffness_matrices()
 
-        transformed_stiffness_matrices = []
+        # transformed_stiffness_matrices = []
 
-        for i in range(self.num_elements):
-            T = transforms[i]
-            local_stiffness = local_stiffness_matrices[i, :, :]
-            TKT = T.T @ local_stiffness @ T
-            transformed_stiffness_matrices.append(TKT)
+        # for i in range(self.num_elements):
+        #     T = transforms[i]
+        #     local_stiffness = local_stiffness_matrices[i, :, :]
+        #     TKT = T.T @ local_stiffness @ T
+        #     transformed_stiffness_matrices.append(TKT)
+
+        # Shape: (num_elements, n, n)
+        T_transpose = np.einsum('ijk->ikj', transforms)
+        # Shape: (num_elements, n, n)
+        T_transpose_K = np.einsum('ijk,ikl->ijl', T_transpose, local_stiffness_matrices)
+        # Shape: (num_elements, n, n)
+        transformed_stiffness_matrices = np.einsum('ijk,ikl->ijl', T_transpose_K, transforms)
 
         return transformed_stiffness_matrices
     
@@ -249,13 +256,20 @@ class Beam:
 
         local_mass_matrices = self._local_mass_matrices()
 
-        transformed_mass_matrices = []
+        # transformed_mass_matrices = []
 
-        for i in range(self.num_elements):
-            T = transforms[i]
-            local_mass = local_mass_matrices[i, :, :]
-            TMT = T.T @ local_mass @ T
-            transformed_mass_matrices.append(TMT)
+        # for i in range(self.num_elements):
+        #     T = transforms[i]
+        #     local_mass = local_mass_matrices[i, :, :]
+        #     TMT = T.T @ local_mass @ T
+        #     transformed_mass_matrices.append(TMT)
+
+        # Shape: (num_elements, n, n)
+        T_transpose = np.einsum('ijk->ikj', transforms)
+        # Shape: (num_elements, n, n)
+        T_transpose_M = np.einsum('ijk,ikl->ijl', T_transpose, local_mass_matrices)
+        # Shape: (num_elements, n, n)
+        transformed_mass_matrices = np.einsum('ijk,ikl->ijl', T_transpose_M, transforms)
 
         return transformed_mass_matrices
     
@@ -263,20 +277,28 @@ class Beam:
     def _recover_loads(self, U):
 
         map = self.map
-        loads = []
-        displacement = np.zeros((12))
+        # loads = []
+        # displacement = np.zeros((12))
+        displacements = np.zeros((self.num_elements, 12))
         lsb = self.local_stiffness_bookshelf
         tb = self.transformations_bookshelf
 
         for i in range(self.num_elements):
             idxa, idxb = map[i], map[i+1]
-            displacement[0:6] = U[idxa:idxa+6]
-            displacement[6:12] = U[idxb:idxb+6]
+            # displacement[0:6] = U[idxa:idxa+6]
+            # displacement[6:12] = U[idxb:idxb+6]
+            displacements[i, 0:6] = U[idxa:idxa+6]
+            displacements[i, 6:12] = U[idxb:idxb+6]
 
-            local_stiffness = lsb[i, :, :] # matrix
-            T = tb[i] # list of matrices
+            # local_stiffness = lsb[i, :, :] # matrix
+            # T = tb[i] # list of matrices
 
-            loads.append(local_stiffness @ T @ displacement)
+            # loads.append(local_stiffness @ T @ displacement)
+
+        transformed_displacements = np.einsum('ijk,ik->ij', tb, displacements)
+
+        # Compute loads
+        loads = np.einsum('ijk,ik->ij', lsb, transformed_displacements)
 
         return loads
     
