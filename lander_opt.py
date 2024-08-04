@@ -82,8 +82,6 @@ def fun(x):
         # if u > limit:
         #     obj += 1000
 
-    # print(np.max(disp))
-
     return obj
 
 
@@ -113,5 +111,3 @@ if __name__ == '__main__':
     t2 = time.time()
     print('time: ', t2 - t1)
     print(res.x)
-
-    # 4935.341277599335 seconds for 1000 DE evolutions
