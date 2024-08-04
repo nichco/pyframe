@@ -286,7 +286,8 @@ class Beam:
         map = self.map
         # loads = []
         # displacement = np.zeros((12))
-        displacements = np.zeros((self.num_elements, 12))
+        # displacements = np.zeros((self.num_elements, 12))
+        displacements = np.empty((self.num_elements, 12))
         lsb = self.local_stiffness_bookshelf
         tb = self.transformations_bookshelf
 

@@ -1,6 +1,6 @@
 import numpy as np
 import pyframe as pf
-import pyvista as pv
+# import pyvista as pv
 import pickle
 import cProfile
 from pstats import SortKey
@@ -121,22 +121,22 @@ for i, beam in enumerate(frame.beams):
 zo = np.array([0, 0, -0.2])
 scale = 70
 
-ft1 = pv.read('foot.stl')
+ft1 = pv.read('stl/foot.stl')
 ft1.scale(scale, inplace=True)
 ft1.translate(meshes[0,0,:] + zo, inplace=True)
 plotter.add_mesh(ft1, color='red')
 
-ft2 = pv.read('foot.stl')
+ft2 = pv.read('stl/foot.stl')
 ft2.scale(scale, inplace=True)
 ft2.translate(meshes[4,0,:] + zo, inplace=True)
 plotter.add_mesh(ft2, color='red')
 
-ft3 = pv.read('foot.stl')
+ft3 = pv.read('stl/foot.stl')
 ft3.scale(scale, inplace=True)
 ft3.translate(meshes[6,0,:] + zo, inplace=True)
 plotter.add_mesh(ft3, color='red')
 
-ft4 = pv.read('foot.stl')
+ft4 = pv.read('stl/foot.stl')
 ft4.scale(scale, inplace=True)
 ft4.translate(meshes[10,0,:] + zo, inplace=True)
 plotter.add_mesh(ft4, color='red')
@@ -146,7 +146,7 @@ torus = pv.ParametricTorus(ringradius=2.375, crosssectionradius=1.4, center=(0, 
 plotter.add_mesh(torus, color='skyblue', opacity=0.5)
 
 # engine
-eng = pv.read('j2engine.stl')
+eng = pv.read('stl/j2engine.stl')
 eng.scale(0.01, inplace=True)
 eng.translate([0, 0, 1], inplace=True)
 plotter.add_mesh(eng, color='orange')

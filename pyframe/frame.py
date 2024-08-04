@@ -130,7 +130,7 @@ class Frame:
                 M[idxb:idxb+6, idxb:idxb+6] += mass_matrix[6:, 6:]
 
         # maybe this is a speedup
-        M = sp.csr_matrix(M)
+        # M = sp.csr_matrix(M)
 
         # # assemble te global loads vector
         F = np.zeros((dim))
@@ -187,12 +187,13 @@ class Frame:
         K = sp.csr_matrix(K)
         U = spla.spsolve(K, F)
 
-        
+
 
         # find the displacements
         displacement = {}
         for beam in self.beams:
-            displacement[beam.name] = np.zeros((beam.num_nodes, 3))
+            # displacement[beam.name] = np.zeros((beam.num_nodes, 3))
+            displacement[beam.name] = np.empty((beam.num_nodes, 3))
             map = beam.map
 
             for i in range(beam.num_nodes):
