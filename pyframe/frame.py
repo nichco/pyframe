@@ -147,6 +147,7 @@ class Frame:
 
 
         # apply boundary conditions
+        indices = []
         for beam in self.beams:
             map = beam.map
             for node in beam.boundary_conditions:
@@ -154,13 +155,14 @@ class Frame:
 
                 for i in range(6):
                     # if dof[i] == 1:
-                        # zero the row/column then put a 1 in the diagonal
-                        K[idx + i, :] = 0
-                        K[:, idx + i] = 0
-                        K[idx + i, idx + i] = 1
+                    indices.append(idx + i)
 
-                        # zero the corresponding load index as well
-                        F[idx + i] = 0
+        # zero the row/column then put a 1 in the diagonal
+        K[indices, :] = 0
+        K[:, indices] = 0
+        K[indices, indices] = 1
+        # zero the corresponding load index as well
+        F[indices] = 0
 
 
 
@@ -189,18 +191,15 @@ class Frame:
             element_loads = beam._recover_loads(U)
             element_loads = np.vstack(element_loads)
             # perform a stress recovery
-            # beam_stress = np.zeros((beam.num_elements))
-            # for i in range(beam.num_elements):
-            #     beam_stress[i] = beam.cs.stress(element_loads[i], i)
             beam_stress = beam.cs.stress(element_loads)
 
             stress[beam.name] = beam_stress
 
 
         # mass properties
-        mass = 0
-        for beam in self.beams:
-            mass += beam._mass()
+        # mass = 0
+        # for beam in self.beams:
+        #     mass += beam._mass()
 
 
 
@@ -212,7 +211,8 @@ class Frame:
                            M=M,
                            K=K,
                            F=F,
-                           mass=mass,)
+                        #    mass=mass,
+                           )
 
 
 

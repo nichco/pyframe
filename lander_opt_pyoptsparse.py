@@ -1,41 +1,30 @@
 import numpy as np
 import pyframe as pf
-# import pyvista as pv
 import pickle
 import time
-# from scipy.optimize import minimize
-from scipy.optimize import differential_evolution, shgo
-
+from pyoptsparse import Optimization, SLSQP, NSGA2
 
 with open('lunar_lander_meshes.pkl', 'rb') as file:
     meshes, radius = pickle.load(file)
-
-
-c_scale = 20
 
 n = meshes.shape[1]
 ne = n - 1
 aluminum = pf.Material(E=69E9, G=26E9, density=2700)
 
 
-acc = np.array([0, 0, -9.81 * 35, 0, 0, 0])
+acc = np.array([0, 0, -9.81 * 40, 0, 0, 0])
 
 
 
-def fun(x):
+def fun(xdict):
     frame = pf.Frame()
     beams = []
 
+    funcs = {}
+    x = xdict['xvars']
+
     for i in range(28):
-        thickness = np.abs(x)
-
-        if i in[2, 5, 8, 11]:
-            thickness = x[0]
-        else:
-            thickness = x[1]
-
-
-
+        thickness = np.abs(x[i])
         beam_radius = np.ones(n - 1) * radius[i]
         cs = pf.CSTube(radius=beam_radius, thickness=thickness)
         beam = pf.Beam(name='beam_'+str(i), mesh=meshes[i, :, :], material=aluminum, cs=cs)
@@ -66,44 +55,26 @@ def fun(x):
     solution = frame.solve()
 
     mass = frame.compute_mass()
-    obj = mass
+    funcs["obj"] = mass
 
-    limit = 0.05
-
-    disp = np.zeros((28, n - 1))
-    for i in range(28):
-        u = np.linalg.norm(solution.displacement['beam_'+str(i)])
-        disp[i, :] = u
-        if u > limit:
-            obj += 100
-
-    return obj
+    fail = False
+    return funcs, fail
 
 
 
-# x0 = np.ones(28) * 0.001
-bnds = ((1E-6, 0.015),) * 2#28
 
-# res = minimize(fun, 
-#                x0, 
-#                method='SLSQP', 
-#                options={'ftol': 1e-4, 'disp': True, 'maxiter': 50}, 
-#                bounds=bnds, 
-#                constraints={'type': 'ineq', 'fun': con})
-# print(res.x)
 
-if __name__ == '__main__':
-    t1 = time.time()
-    res = differential_evolution(fun, 
-                                 bounds=bnds, 
-                                 disp=True, 
-                                 workers=-1, 
-                                 popsize=5, 
-                                 recombination=0.5)
-    # res = shgo(fun, bounds=bnds, options={'disp': True}, workers=1)
-    # res = minimize(fun, x0, method='nelder-mead', bounds=bnds, options={'xatol': 1e-8, 'disp': True})
-    t2 = time.time()
-    print('time: ', t2 - t1)
-    print(res.x)
+optProb = Optimization('lunar_lander', fun)
 
-    # 4935.341277599335 seconds for 1000 DE evolutions
+optProb.addVarGroup("xvars", 28, "c", lower=0.001, upper=0.01, value=0.002)
+
+optProb.addObj("obj")
+
+print(optProb)
+
+# opt = SLSQP(options={"IPRINT": -1})
+opt = NSGA2(options={"maxGen": 100, "PopSize": 100})
+
+sol = opt(optProb)
+
+print(sol)

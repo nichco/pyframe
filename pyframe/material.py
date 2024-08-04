@@ -7,4 +7,5 @@ class Material:
     E: float
     G: float
     density: float
+
     name: Optional[str] = None
