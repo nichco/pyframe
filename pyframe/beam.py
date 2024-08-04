@@ -77,56 +77,62 @@ class Beam:
         local_stiffness = np.zeros((self.num_elements, 12, 12))
 
         # pre-computations for speed
-        EIy = E*Iy
-        EIz = E*Iz
-        EIzL3 = EIz/L**3
-        EIzL2 = EIz/L**2
-        EIyL3 = EIy/L**3
-        EIyL2 = EIy/L**2
+        AEL = A*E/L
+        GJL = G*J/L
 
-        local_stiffness[:, 0, 0] = A*E/L
+        EIz = E*Iz
+        EIzL = EIz/L
+        EIzL2 = EIzL/L
+        EIzL3 = EIzL2/L
+
+        EIy = E*Iy
+        EIyL = EIy/L
+        EIyL2 = EIyL/L
+        EIyL3 = EIyL2/L
+
+        local_stiffness[:, 0, 0] = AEL
         local_stiffness[:, 1, 1] = 12*EIzL3
         local_stiffness[:, 1, 5] = 6*EIzL2
         local_stiffness[:, 5, 1] = 6*EIzL2
         local_stiffness[:, 2, 2] = 12*EIyL3
         local_stiffness[:, 2, 4] = -6*EIyL2
         local_stiffness[:, 4, 2] = -6*EIyL2
-        local_stiffness[:, 3, 3] = G*J/L
-        local_stiffness[:, 4, 4] = 4*EIy/L
-        local_stiffness[:, 5, 5] = 4*EIz/L
+        local_stiffness[:, 3, 3] = GJL
+        local_stiffness[:, 4, 4] = 4*EIyL
+        local_stiffness[:, 5, 5] = 4*EIzL
 
-        local_stiffness[:, 0, 6] = -A*E/L
+        local_stiffness[:, 0, 6] = -AEL
         local_stiffness[:, 1, 7] = -12*EIzL3
         local_stiffness[:, 1, 11] = 6*EIzL2
         local_stiffness[:, 2, 8] = -12*EIyL3
         local_stiffness[:, 2, 10] = -6*EIyL2
-        local_stiffness[:, 3, 9] = -G*J/L
+        local_stiffness[:, 3, 9] = -GJL
         local_stiffness[:, 4, 8] = 6*EIyL2
-        local_stiffness[:, 4, 10] = 2*EIy/L
+        local_stiffness[:, 4, 10] = 2*EIyL
         local_stiffness[:, 5, 7] = -6*EIzL2
-        local_stiffness[:, 5, 11] = 2*EIz/L
+        local_stiffness[:, 5, 11] = 2*EIzL
 
-        local_stiffness[:, 6, 0] = -A*E/L
+        local_stiffness[:, 6, 0] = -AEL
         local_stiffness[:, 7, 1] = -12*EIzL3
         local_stiffness[:, 7, 5] = -6*EIzL2
         local_stiffness[:, 8, 2] = -12*EIyL3
         local_stiffness[:, 8, 4] = 6*EIyL2
-        local_stiffness[:, 9, 3] = -G*J/L
+        local_stiffness[:, 9, 3] = -GJL
         local_stiffness[:, 10, 2] = -6*EIyL2
-        local_stiffness[:, 10, 4] = 2*EIy/L
+        local_stiffness[:, 10, 4] = 2*EIyL
         local_stiffness[:, 11, 1] = 6*EIzL2
-        local_stiffness[:, 11, 5] = 2*EIz/L
+        local_stiffness[:, 11, 5] = 2*EIzL
 
-        local_stiffness[:, 6, 6] = A*E/L
+        local_stiffness[:, 6, 6] = AEL
         local_stiffness[:, 7, 7] = 12*EIzL3
         local_stiffness[:, 7, 11] = -6*EIzL2
         local_stiffness[:, 11, 7] = -6*EIzL2
         local_stiffness[:, 8, 8] = 12*EIyL3
         local_stiffness[:, 8, 10] = 6*EIyL2
         local_stiffness[:, 10, 8] = 6*EIyL2
-        local_stiffness[:, 9, 9] = G*J/L
-        local_stiffness[:, 10, 10] = 4*EIy/L
-        local_stiffness[:, 11, 11] = 4*EIz/L
+        local_stiffness[:, 9, 9] = GJL
+        local_stiffness[:, 10, 10] = 4*EIyL
+        local_stiffness[:, 11, 11] = 4*EIzL
 
         self.local_stiffness_bookshelf = local_stiffness
 
@@ -141,6 +147,7 @@ class Beam:
 
         # coefficients
         aa = L / 2
+        aa2 = aa**2
         coef = rho * A * aa / 105
         rx2 = J / A
 
@@ -152,10 +159,10 @@ class Beam:
         local_mass[:, 3, 3] = coef * 78 * rx2
         local_mass[:, 2, 4] = coef * -22 * aa
         local_mass[:, 4, 2] = coef * -22 * aa
-        local_mass[:, 4, 4] = coef * 8 * aa**2
+        local_mass[:, 4, 4] = coef * 8 * aa2
         local_mass[:, 1, 5] = coef * 22 * aa
         local_mass[:, 5, 1] = coef * 22 * aa
-        local_mass[:, 5, 5] = coef * 8 * aa**2
+        local_mass[:, 5, 5] = coef * 8 * aa2
         local_mass[:, 0, 6] = coef * 35
         local_mass[:, 6, 0] = coef * 35
         local_mass[:, 6, 6] = coef * 70
@@ -174,18 +181,18 @@ class Beam:
         local_mass[:, 9, 9] = coef * 70 * rx2
         local_mass[:, 2, 10] = coef * 13 * aa
         local_mass[:, 10, 2] = coef * 13 * aa
-        local_mass[:, 4, 10] = coef * -6 * aa**2
-        local_mass[:, 10, 4] = coef * -6 * aa**2
+        local_mass[:, 4, 10] = coef * -6 * aa2
+        local_mass[:, 10, 4] = coef * -6 * aa2
         local_mass[:, 8, 10] = coef * 22 * aa
         local_mass[:, 10, 8] = coef * 22 * aa
-        local_mass[:, 10, 10] = coef * 8 * aa**2
+        local_mass[:, 10, 10] = coef * 8 * aa2
         local_mass[:, 1, 11] = coef * -13 * aa
         local_mass[:, 11, 1] = coef * -13 * aa
-        local_mass[:, 5, 11] = coef * -6 * aa**2
-        local_mass[:, 11, 5] = coef * -6 * aa**2
+        local_mass[:, 5, 11] = coef * -6 * aa2
+        local_mass[:, 11, 5] = coef * -6 * aa2
         local_mass[:, 7, 11] = coef * -22 * aa
         local_mass[:, 11, 7] = coef * -22 * aa
-        local_mass[:, 11, 11] = coef * 8 * aa**2
+        local_mass[:, 11, 11] = coef * 8 * aa2
 
 
         return local_mass

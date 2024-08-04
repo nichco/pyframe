@@ -13,23 +13,28 @@ class CSTube:
         self.radius = radius
         self.thickness = thickness
 
-    @property
-    def area(self):
+        self.area = self._area()
+        self.ix = self._ix()
+        self.iy = self._iy()
+        self.iz = self._iz()
+
+    # @property
+    def _area(self):
         inner_radius, outer_radius = self.radius - self.thickness, self.radius
         return np.pi * (outer_radius**2 - inner_radius**2)
     
-    @property
-    def ix(self):
+    # @property
+    def _ix(self):
         inner_radius, outer_radius = self.radius - self.thickness, self.radius
         return np.pi * (outer_radius**4 - inner_radius**4) / 2
     
-    @property
-    def iy(self):
+    # @property
+    def _iy(self):
         inner_radius, outer_radius = self.radius - self.thickness, self.radius
         return np.pi * (outer_radius**4 - inner_radius**4) / 4
     
-    @property
-    def iz(self):
+    # @property
+    def _iz(self):
         inner_radius, outer_radius = self.radius - self.thickness, self.radius
         return np.pi * (outer_radius**4 - inner_radius**4) / 4
     

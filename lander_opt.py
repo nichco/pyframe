@@ -18,9 +18,9 @@ ne = n - 1
 aluminum = pf.Material(E=69E9, G=26E9, density=2700)
 
 
-acc = np.array([0, 0, -9.81 * 35, 0, 0, 0])
-
-
+acc = np.array([0, 0, -9.81 * 40, 0, 0, 0])
+# [0.00053907 0.00014542 0.00040952]
+# [0.00054388 0.00014725 0.00040671]
 
 def fun(x):
     frame = pf.Frame()
@@ -31,8 +31,10 @@ def fun(x):
 
         if i in[2, 5, 8, 11]:
             thickness = x[0]
-        else:
+        elif i in [12, 13, 14, 15, 16, 17, 18, 19]:
             thickness = x[1]
+        else:
+            thickness = x[2]
 
 
 
@@ -70,19 +72,24 @@ def fun(x):
 
     limit = 0.05
 
-    disp = np.zeros((28, n - 1))
+    disp = np.zeros((28, n))
     for i in range(28):
-        u = np.linalg.norm(solution.displacement['beam_'+str(i)])
+        u = np.linalg.norm(solution.displacement['beam_'+str(i)], axis=1)
+        for j in range(n):
+            if u[j] > limit:
+                obj += 300
         disp[i, :] = u
-        if u > limit:
-            obj += 100
+        # if u > limit:
+        #     obj += 1000
+
+    # print(np.max(disp))
 
     return obj
 
 
 
 # x0 = np.ones(28) * 0.001
-bnds = ((1E-6, 0.015),) * 2#28
+bnds = ((1E-5, 0.015),) * 3#28
 
 # res = minimize(fun, 
 #                x0, 
@@ -98,8 +105,9 @@ if __name__ == '__main__':
                                  bounds=bnds, 
                                  disp=True, 
                                  workers=-1, 
-                                 popsize=5, 
-                                 recombination=0.5)
+                                 popsize=4, # lower is faster, but less likely to find the global minimum
+                                 recombination=0.5, # higher increases exploration. Lower refines the current best solution
+                                 tol=1E-4)
     # res = shgo(fun, bounds=bnds, options={'disp': True}, workers=1)
     # res = minimize(fun, x0, method='nelder-mead', bounds=bnds, options={'xatol': 1e-8, 'disp': True})
     t2 = time.time()

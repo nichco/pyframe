@@ -77,6 +77,22 @@ class Frame:
             mass += beam._mass()
 
         return mass
+    
+
+    def compute_stress(self, U):
+
+        # calculate the elemental loads and stresses
+        stress = {}
+        for beam in self.beams:
+            # elemental loads
+            element_loads = beam._recover_loads(U)
+            element_loads = np.vstack(element_loads)
+            # perform a stress recovery
+            beam_stress = beam.cs.stress(element_loads)
+
+            stress[beam.name] = beam_stress
+
+        return stress
 
 
     def solve(self):
@@ -171,6 +187,7 @@ class Frame:
         K = sp.csr_matrix(K)
         U = spla.spsolve(K, F)
 
+        
 
         # find the displacements
         displacement = {}
@@ -184,16 +201,16 @@ class Frame:
                 displacement[beam.name][i, :] = U[idx:idx+3]
 
 
-        # calculate the elemental loads and stresses
-        stress = {}
-        for beam in self.beams:
-            # elemental loads
-            element_loads = beam._recover_loads(U)
-            element_loads = np.vstack(element_loads)
-            # perform a stress recovery
-            beam_stress = beam.cs.stress(element_loads)
+        # # calculate the elemental loads and stresses
+        # stress = {}
+        # for beam in self.beams:
+        #     # elemental loads
+        #     element_loads = beam._recover_loads(U)
+        #     element_loads = np.vstack(element_loads)
+        #     # perform a stress recovery
+        #     beam_stress = beam.cs.stress(element_loads)
 
-            stress[beam.name] = beam_stress
+        #     stress[beam.name] = beam_stress
 
 
         # mass properties
@@ -207,7 +224,7 @@ class Frame:
 
 
         return pf.Solution(displacement=displacement,
-                           stress=stress,
+                        #    stress=stress,
                            M=M,
                            K=K,
                            F=F,
