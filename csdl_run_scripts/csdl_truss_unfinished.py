@@ -12,12 +12,35 @@ from pstats import SortKey
 recorder = csdl.Recorder(inline=True)
 recorder.start()
 
-n = 5
+n = 4
 
-# left upright
+# top right upright
 mesh = np.zeros((n, 3))
-mesh[:, 1] = np.linspace(0, 10, n)
+mesh[:, 0] = 0.5
+mesh[:, 1] = 0.5
+mesh[:, 2] = np.linspace(0, 1, n)
 mesh_1 = csdl.Variable(value=mesh)
+
+# top left upright
+mesh = np.zeros((n, 3))
+mesh[:, 0] = -0.5
+mesh[:, 1] = 0.5
+mesh[:, 2] = np.linspace(0, 1, n)
+mesh_2 = csdl.Variable(value=mesh)
+
+# bottom left upright
+mesh = np.zeros((n, 3))
+mesh[:, 0] = -0.5
+mesh[:, 1] = -0.5
+mesh[:, 2] = np.linspace(0, 1, n)
+mesh_2 = csdl.Variable(value=mesh)
+
+# bottom right upright
+mesh = np.zeros((n, 3))
+mesh[:, 0] = -0.5
+mesh[:, 1] = -0.5
+mesh[:, 2] = np.linspace(0, 1, n)
+mesh_2 = csdl.Variable(value=mesh)
 
 # right upright
 mesh = np.zeros((n, 3))
@@ -116,8 +139,8 @@ recorder.stop()
 
 
 
-sim = csdl.experimental.PySimulator(recorder)
-# sim = csdl.experimental.JaxSimulator(recorder=recorder)
+# sim = csdl.experimental.PySimulator(recorder)
+sim = csdl.experimental.JaxSimulator(recorder=recorder)
 # sim.run()
 prob = CSDLAlphaProblem(problem_name='lander', simulator=sim)
 optimizer = SLSQP(prob, solver_options={'maxiter': 300, 'ftol': 1e-6, 'disp': True})

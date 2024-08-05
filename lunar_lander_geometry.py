@@ -63,7 +63,7 @@ radius = np.array([sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, sr, s
 
 
 
-nodes_per_edge = 6
+nodes_per_edge = 4
 meshes = af.mesh_from_points_and_edges(points, edges, nodes_per_edge)
 
 
@@ -88,22 +88,22 @@ for i in range(meshes.shape[0]):
 zo = np.array([0, 0, -0.2])
 scale = 70
 
-ft1 = pv.read('foot.stl')
+ft1 = pv.read('stl/foot.stl')
 ft1.scale(scale, inplace=True)
 ft1.translate(meshes[0,0,:] + zo, inplace=True)
 plotter.add_mesh(ft1, color='red')
 
-ft2 = pv.read('foot.stl')
+ft2 = pv.read('stl/foot.stl')
 ft2.scale(scale, inplace=True)
 ft2.translate(meshes[4,0,:] + zo, inplace=True)
 plotter.add_mesh(ft2, color='red')
 
-ft3 = pv.read('foot.stl')
+ft3 = pv.read('stl/foot.stl')
 ft3.scale(scale, inplace=True)
 ft3.translate(meshes[6,0,:] + zo, inplace=True)
 plotter.add_mesh(ft3, color='red')
 
-ft4 = pv.read('foot.stl')
+ft4 = pv.read('stl/foot.stl')
 ft4.scale(scale, inplace=True)
 ft4.translate(meshes[10,0,:] + zo, inplace=True)
 plotter.add_mesh(ft4, color='red')
@@ -124,7 +124,7 @@ plotter.add_mesh(torus, color='skyblue', opacity=0.5)
 
 
 # engine
-eng = pv.read('j2engine.stl')
+eng = pv.read('stl/j2engine.stl')
 eng.scale(0.01, inplace=True)
 eng.translate([0, 0, 1], inplace=True)
 plotter.add_mesh(eng, color='orange')

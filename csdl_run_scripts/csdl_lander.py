@@ -7,13 +7,13 @@ from modopt import SLSQP
 import pickle
 
 with open('lunar_lander_meshes.pkl', 'rb') as file:
-    meshes, radius = pickle.load(file)
+    meshes, _ = pickle.load(file)
 
 n = meshes.shape[1]
 
 
 
-recorder = csdl.Recorder(inline=False, debug=False)
+recorder = csdl.Recorder(inline=True, debug=False)
 recorder.start()
 
 aluminum = pf.Material(E=69E9, G=26E9, density=2700)
@@ -27,22 +27,13 @@ for i in range(28):
     beam_mesh = csdl.Variable(value=beam_mesh)
     beam_meshes.append(beam_mesh)
 
-beam_radius = []
-
-for i in range(28):
-    # n = beam_meshes[i].shape[0]
-    r = csdl.Variable(value=np.ones(n - 1) * radius[i])
-    beam_radius.append(r)
-
 beams = []
-beam_thicknesses = []
 
 for i in range(28):
-    t = csdl.Variable(value=0.005)
-    beam_thicknesses.append(t)
-    t.set_as_design_variable(lower=0.001, upper=radius[i], scaler=1E2)
-    beam_thickness = csdl.expand(t, (n - 1,))
-    beam_cs = pf.CSDLCSTube(radius=beam_radius[i], thickness=beam_thickness)
+    r = csdl.Variable(value=0.3)
+    r.set_as_design_variable(lower=0.01, scaler=1E1)
+    radius = csdl.expand(r, (n - 1,))
+    beam_cs = pf.CSDLCSCircle(radius=radius)
     beam = pf.CSDLBeam(name='beam_'+str(i), mesh=beam_meshes[i], material=aluminum, cs=beam_cs)
 
     if i in [0, 4, 6, 10]: # fix the feet
@@ -84,28 +75,20 @@ frame.add_acc(acc)
 solution = frame.solve()
 
 
-# frame_stress = csdl.Variable(value=np.zeros((28, ne)))
-# for i, beam in enumerate(beams):
-#     stress = solution.get_stress(beam)
-#     frame_stress = frame_stress.set(csdl.slice[i, :], stress)
 
-# max_stress = csdl.maximum(frame_stress * 1E-6) # need to flatten it?
-# max_stress.set_as_constraint(upper=20, scaler=1E-7)
+disp = csdl.Variable(value=np.zeros((28, 4, 3)))
+for i, beam in enumerate(beams):
+    beam_disp = solution.displacement[beam.name]
+    disp = disp.set(csdl.slice[i, :, :], beam_disp)
 
-limit = 200
+max_disp = csdl.maximum(disp)
+max_disp.set_as_constraint(upper=0.1, scaler=1E1)
 
-stress = csdl.Variable(value=np.zeros((28, n - 1)))
-for i in range(28):
-    stress = stress.set(csdl.slice[i, :], solution.stress['beam_'+str(i)])
+min_disp = csdl.maximum(-disp)
+min_disp.set_as_constraint(upper=0.1, scaler=1E1)
 
-max_stress = csdl.maximum(stress * 1E-6)
 
-# phi = (stress * 1E-6) - limit
-# penalty = csdl.inner(phi, phi)
-
-max_stress.set_as_constraint(upper=50, scaler=1E-7)
-
-mass = solution.mass #+ penalty
+mass = frame.compute_mass()
 mass.set_as_objective(scaler=1E-2)
 
 recorder.stop()
@@ -122,19 +105,18 @@ recorder.stop()
 # BroadcastSetIndex : 768
 # Sub : 728
 # Div : 672
-# exit()
+
 # import tracemalloc
 # tracemalloc.start()
 
 import time
 t1 = time.time()
 
-# sim = csdl.experimental.PySimulator(recorder)
-sim = csdl.experimental.JaxSimulator(recorder=recorder)
+# sim = csdl.experimental.PySimulator(recorder) # 0.647
+sim = csdl.experimental.JaxSimulator(recorder=recorder) # 52.8 62.6 53.38 # 25950 nodes
 sim.run()
 # prob = CSDLAlphaProblem(problem_name='lander', simulator=sim)
 # optimizer = SLSQP(prob, solver_options={'maxiter': 50, 'ftol': 1e-5, 'disp': True})
-# print('solving')
 # optimizer.solve()
 # optimizer.print_results()
 
@@ -153,10 +135,10 @@ print('time: ', t2 - t1)
 # tracemalloc.stop()
 
 print('mass: ', mass.value)
-print(beam_thicknesses[0].value)
+# print(beam_thicknesses[0].value)
 
 
-exit()
+# exit()
 plotter = pv.Plotter()
 
 for i, beam in enumerate(frame.beams):
@@ -165,13 +147,14 @@ for i, beam in enumerate(frame.beams):
     mesh1 = mesh0 + 20 * disp
 
     radius = beam.cs.radius.value
+    # radius = np.ones((n - 1))*0.1
 
-    stress = solution.stress[beam.name].value
+    disp = np.linalg.norm(solution.displacement[beam.name].value, axis=1)
 
     # af.plot_mesh(plotter, mesh0, color='lightblue', line_width=10)
     # plot_mesh(plotter, mesh1, cell_data=stress, cmap='viridis', line_width=20)
     pf.plot_points(plotter, mesh1, color='blue', point_size=15)
-    pf.plot_cyl(plotter, mesh1, cell_data=stress, radius=radius, cmap='plasma')
+    pf.plot_cyl(plotter, mesh1, cell_data=None, radius=radius, cmap='plasma')
 
     if i in [0, 4, 6, 10]:
         cyl = pv.Cylinder(center=mesh1[0, :], direction=[0, 0, 1], radius=0.6, height=0.2)
@@ -182,22 +165,22 @@ for i, beam in enumerate(frame.beams):
 zo = np.array([0, 0, -0.2])
 scale = 70
 
-ft1 = pv.read('foot.stl')
+ft1 = pv.read('stl/foot.stl')
 ft1.scale(scale, inplace=True)
 ft1.translate(meshes[0,0,:] + zo, inplace=True)
 plotter.add_mesh(ft1, color='red')
 
-ft2 = pv.read('foot.stl')
+ft2 = pv.read('stl/foot.stl')
 ft2.scale(scale, inplace=True)
 ft2.translate(meshes[4,0,:] + zo, inplace=True)
 plotter.add_mesh(ft2, color='red')
 
-ft3 = pv.read('foot.stl')
+ft3 = pv.read('stl/foot.stl')
 ft3.scale(scale, inplace=True)
 ft3.translate(meshes[6,0,:] + zo, inplace=True)
 plotter.add_mesh(ft3, color='red')
 
-ft4 = pv.read('foot.stl')
+ft4 = pv.read('stl/foot.stl')
 ft4.scale(scale, inplace=True)
 ft4.translate(meshes[10,0,:] + zo, inplace=True)
 plotter.add_mesh(ft4, color='red')
@@ -207,7 +190,7 @@ torus = pv.ParametricTorus(ringradius=2.375, crosssectionradius=1.4, center=(0, 
 plotter.add_mesh(torus, color='skyblue', opacity=0.5)
 
 # engine
-eng = pv.read('j2engine.stl')
+eng = pv.read('stl/j2engine.stl')
 eng.scale(0.01, inplace=True)
 eng.translate([0, 0, 1], inplace=True)
 plotter.add_mesh(eng, color='orange')
