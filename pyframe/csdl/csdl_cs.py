@@ -1,13 +1,14 @@
 import pyframe as pf
 import numpy as np
+import csdl_alpha as csdl
 # from dataclasses import dataclass
 # from typing import Optional
 
 
 class CSDLCSTube:
     def __init__(self, 
-                 radius:np.array,
-                 thickness:np.array
+                 radius:csdl.Variable,
+                 thickness:csdl.Variable
                  ):
         
         self.radius = radius
@@ -73,3 +74,39 @@ class CSDLCSTube:
         
         return von_mises_stress
     
+
+
+
+
+class CSDLCSCircle:
+    def __init__(self, 
+                 radius:csdl.Variable,
+                 ):
+        
+        self.radius = radius
+
+        self.area = self._area()
+        self.ix = self._ix()
+        self.iy = self._iy()
+        self.iz = self._iz()
+
+    # @property
+    def _area(self):
+        return np.pi * self.radius**2
+    
+    # @property
+    def _ix(self):
+        return (1 / 2) * np.pi * self.radius**4
+    
+    # @property
+    def _iy(self):
+        return (1 / 4) * np.pi * self.radius**4
+    
+    # @property
+    def _iz(self):
+        return (1 / 4) * np.pi * self.radius**4
+    
+
+    def stress(self, element_loads):
+
+        pass

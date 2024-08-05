@@ -68,6 +68,16 @@ class CSDLFrame:
                 map[i] = helper[map[i]] * 6
 
         return dim, num
+    
+
+    def compute_mass(self):
+
+        # mass properties
+        mass = 0
+        for beam in self.beams:
+            mass += beam._mass()
+
+        return mass
 
 
     def solve(self):
@@ -186,22 +196,22 @@ class CSDLFrame:
             displacement[beam.name] = displacement[beam.name].set(csdl.slice[:, :], reshaped_U)
 
 
-        # calculate the elemental loads and stresses
-        stress = {}
-        for beam in self.beams:
-            # elemental loads
-            element_loads = beam._recover_loads(U)
-            # element_loads = csdl.vstack(element_loads)
-            # perform a stress recovery
-            beam_stress = beam.cs.stress(element_loads)
+        # # calculate the elemental loads and stresses
+        # stress = {}
+        # for beam in self.beams:
+        #     # elemental loads
+        #     element_loads = beam._recover_loads(U)
+        #     # element_loads = csdl.vstack(element_loads)
+        #     # perform a stress recovery
+        #     beam_stress = beam.cs.stress(element_loads)
 
-            stress[beam.name] = beam_stress
+        #     stress[beam.name] = beam_stress
 
 
-        # mass properties
-        mass = 0
-        for beam in self.beams:
-            mass += beam._mass()
+        # # mass properties
+        # mass = 0
+        # for beam in self.beams:
+        #     mass += beam._mass()
 
 
 
@@ -209,11 +219,12 @@ class CSDLFrame:
 
 
         return pf.Solution(displacement=displacement,
-                           stress=stress,
+                        #    stress=stress,
                            M=M,
                            K=K,
                            F=F,
-                           mass=mass,)
+                        #    mass=mass,
+                           )
 
 
 

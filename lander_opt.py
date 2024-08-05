@@ -4,7 +4,7 @@ import pyframe as pf
 import pickle
 import time
 # from scipy.optimize import minimize
-from scipy.optimize import differential_evolution, shgo
+from scipy.optimize import differential_evolution
 
 
 with open('lunar_lander_meshes.pkl', 'rb') as file:
@@ -27,7 +27,6 @@ def fun(x):
     beams = []
 
     for i in range(28):
-        thickness = np.abs(x)
 
         if i in[2, 5, 8, 11]:
             thickness = x[0]
