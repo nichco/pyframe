@@ -5,41 +5,40 @@ import pyvista as pv
 from modopt import CSDLAlphaProblem
 from modopt import SLSQP
 import pickle
+# import tracemalloc
 
+
+# import the beam meshes
 with open('lunar_lander_meshes.pkl', 'rb') as file:
     meshes, _ = pickle.load(file)
 
+# mesh data and pyframe material
 n = meshes.shape[1]
-
-
 aluminum = pf.Material(E=69E9, G=26E9, density=2700)
 
 
+
+
+# csdl stuff
 recorder = csdl.Recorder(inline=True, debug=False)
 recorder.start()
-
-# aluminum = pf.Material(E=69E9, G=26E9, density=2700)
 
 frame = pf.CSDLFrame()
 
 beam_meshes = []
 
-for i in range(24):
+for i in range(28):
     beam_mesh = meshes[i, :, :]
     beam_mesh = csdl.Variable(value=beam_mesh)
     beam_meshes.append(beam_mesh)
 
 beams = []
 
-r = csdl.Variable(value=np.ones((24)) * 0.1)
-print(r.value)
-r.set_as_design_variable(lower=0.01, upper=0.5, scaler=1E1)
-radii = csdl.expand(r, (24, n-1), 'i->ij')
+r = csdl.Variable(value=np.ones((28)) * 0.1)
+r.set_as_design_variable(lower=0.05, upper=0.5, scaler=1E1)
+radii = csdl.expand(r, (28, n-1), 'i->ij')
 
-for i in range(24):
-    # r = csdl.Variable(value=0.1)
-    # r.set_as_design_variable(lower=0.01, scaler=1E1)
-    # radius = csdl.expand(r[i], (n - 1,))
+for i in range(28):
     beam_cs = pf.CSDLCSCircle(radius=radii[i, :])
     beam = pf.CSDLBeam(name='beam_'+str(i), mesh=beam_meshes[i], material=aluminum, cs=beam_cs)
 
@@ -55,60 +54,77 @@ for i in range(24):
 
 
 ne = n - 1
-# foot joints
+# # foot joints
+# frame.add_joint(members=[beams[0], beams[1], beams[2]], nodes=[0, 0, 0])
+# frame.add_joint(members=[beams[3], beams[4], beams[5]], nodes=[0, 0, 0])
+# frame.add_joint(members=[beams[6], beams[7], beams[8]], nodes=[0, 0, 0])
+# frame.add_joint(members=[beams[9], beams[10], beams[11]], nodes=[0, 0, 0])
+# # middle outside joints
+# frame.add_joint(members=[beams[1], beams[3], beams[13], beams[14]], nodes=[ne, ne, 0, 0, ne, 0])
+# frame.add_joint(members=[beams[4], beams[6], beams[15], beams[17]], nodes=[ne, ne, 0, 0, ne, 0])
+# frame.add_joint(members=[beams[7], beams[9], beams[16], beams[18]], nodes=[ne, ne, 0, 0, ne, 0])
+# frame.add_joint(members=[beams[10], beams[0], beams[12], beams[19]], nodes=[ne, ne, 0, 0, 0, ne])
+# # leg strut attach joints
+# frame.add_joint(members=[beams[2], beams[12], beams[13], beams[20], beams[21]], nodes=[ne, ne, ne, ne, 0])
+# frame.add_joint(members=[beams[5], beams[14], beams[15], beams[21], beams[22]], nodes=[ne, ne, ne, ne, 0])
+# frame.add_joint(members=[beams[8], beams[16], beams[17], beams[22], beams[23]], nodes=[ne, ne, ne, ne, 0])
+# frame.add_joint(members=[beams[11], beams[18], beams[19], beams[23], beams[20]], nodes=[ne, ne, ne, ne, 0])
+
+
 frame.add_joint(members=[beams[0], beams[1], beams[2]], nodes=[0, 0, 0])
 frame.add_joint(members=[beams[3], beams[4], beams[5]], nodes=[0, 0, 0])
 frame.add_joint(members=[beams[6], beams[7], beams[8]], nodes=[0, 0, 0])
 frame.add_joint(members=[beams[9], beams[10], beams[11]], nodes=[0, 0, 0])
-# middle outside joints
-frame.add_joint(members=[beams[1], beams[3], beams[13], beams[14]], nodes=[ne, ne, 0, 0, ne, 0])
-frame.add_joint(members=[beams[4], beams[6], beams[15], beams[17]], nodes=[ne, ne, 0, 0, ne, 0])
-frame.add_joint(members=[beams[7], beams[9], beams[16], beams[18]], nodes=[ne, ne, 0, 0, ne, 0])
-frame.add_joint(members=[beams[10], beams[0], beams[12], beams[19]], nodes=[ne, ne, 0, 0, 0, ne])
-# leg strut attach joints
-frame.add_joint(members=[beams[2], beams[12], beams[13], beams[20], beams[21]], nodes=[ne, ne, ne, ne, 0])
-frame.add_joint(members=[beams[5], beams[14], beams[15], beams[21], beams[22]], nodes=[ne, ne, ne, ne, 0])
-frame.add_joint(members=[beams[8], beams[16], beams[17], beams[22], beams[23]], nodes=[ne, ne, ne, ne, 0])
-frame.add_joint(members=[beams[11], beams[18], beams[19], beams[23], beams[20]], nodes=[ne, ne, ne, ne, 0])
+frame.add_joint(members=[beams[1], beams[3], beams[13], beams[14], beams[20], beams[21]], nodes=[ne, ne, 0, 0, ne, 0])
+frame.add_joint(members=[beams[4], beams[6], beams[15], beams[17], beams[21], beams[22]], nodes=[ne, ne, 0, 0, ne, 0])
+frame.add_joint(members=[beams[7], beams[9], beams[16], beams[18], beams[22], beams[23]], nodes=[ne, ne, 0, 0, ne, 0])
+frame.add_joint(members=[beams[10], beams[0], beams[12], beams[19], beams[20], beams[23]], nodes=[ne, ne, 0, 0, 0, ne])
+frame.add_joint(members=[beams[2], beams[12], beams[13], beams[24], beams[25]], nodes=[ne, ne, ne, ne, 0])
+frame.add_joint(members=[beams[5], beams[14], beams[15], beams[25], beams[26]], nodes=[ne, ne, ne, ne, 0])
+frame.add_joint(members=[beams[8], beams[16], beams[17], beams[26], beams[27]], nodes=[ne, ne, ne, ne, 0])
+frame.add_joint(members=[beams[11], beams[18], beams[19], beams[27], beams[24]], nodes=[ne, ne, ne, ne, 0])
 
-
+# add an acceleration
 acc = csdl.Variable(value=np.array([0, 0, -9.81 * 30, 0, 0, 0]))
 frame.add_acc(acc)
 
+# solve the system
 solution = frame.solve()
 
-
-
-disp = csdl.Variable(value=np.zeros((28, 4, 3)))
+# displacement constraints
+disp = csdl.Variable(value=np.zeros((28, 6, 3)))
 for i, beam in enumerate(beams):
     beam_disp = solution.displacement[beam.name]
     disp = disp.set(csdl.slice[i, :, :], beam_disp)
 
-ndisp = csdl.norm(disp + 1E-6, axes=(2,))
-# squared_disp = disp**2
-
-max_disp = csdl.maximum(ndisp * 10)/10
+# ndisp = csdl.norm(disp + 1E-6, axes=(2,))
+max_disp = csdl.maximum(disp * 10)/10
 max_disp.set_as_constraint(upper=0.03, scaler=1E1)
+min_disp = csdl.maximum(-disp)
+min_disp.set_as_constraint(upper=0.1, scaler=1E1)
 
-# min_disp = csdl.maximum(-disp)
-# min_disp.set_as_constraint(upper=0.1, scaler=1E1)
+
+
+
 
 
 mass = frame.compute_mass()
 mass.set_as_objective(scaler=1E-2)
 
 recorder.stop()
-
 # recorder.count_operations()
 
-# import tracemalloc
+
+
+
+
 # tracemalloc.start()
 
 import time
 t1 = time.time()
 
-sim = csdl.experimental.PySimulator(recorder)
-# sim = csdl.experimental.JaxSimulator(recorder=recorder) # 22850 & 98330
+# sim = csdl.experimental.PySimulator(recorder)
+sim = csdl.experimental.JaxSimulator(recorder=recorder)
 # sim.run()
 prob = CSDLAlphaProblem(problem_name='lander', simulator=sim)
 optimizer = SLSQP(prob, solver_options={'maxiter': 100, 'ftol': 1e-5, 'disp': True})
@@ -118,22 +134,20 @@ optimizer.print_results()
 t2 = time.time()
 print('time: ', t2 - t1)
 
-# time: 140.84449791908264 with einsums in transform
-# time: 113 with even more einsums
-# time: 112 with condition extra inertial loads
-# time: 107 by moving some ops out of transformations for loop
-# time: 87 by moving even more out of transofrmations for loop
-# time: 75 with .set() called outside of for loops
-# time: 73 small changes
-
 # print(tracemalloc.get_traced_memory())
 # tracemalloc.stop()
 
-print('mass: ', mass.value)
-print('r: ', r.value)
+# print('mass: ', mass.value)
+# print('r: ', r.value)
 
 
-# exit()
+
+# 55 seconds no constraints
+
+exit()
+
+
+# plotting code
 plotter = pv.Plotter()
 
 for i, beam in enumerate(frame.beams):

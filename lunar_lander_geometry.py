@@ -46,10 +46,10 @@ edges = np.array([[0, 4],
                   [7, 8],
                   [7, 9],
                   [4, 9],
-                #   [4, 5],
-                #   [5, 6],
-                #   [6, 7],
-                #   [7, 4],
+                  [4, 5],
+                  [5, 6],
+                  [6, 7],
+                  [7, 4],
                   [9, 10],
                   [10, 11],
                   [11, 8],
@@ -59,11 +59,11 @@ edges = np.array([[0, 4],
 
 sr = 0.05
 lr = 0.15
-radius = np.array([sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, sr, sr, sr, sr, sr, sr, sr, sr, sr, sr])
+radius = np.array([sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, lr, sr, sr, sr, sr, sr, sr, sr, sr, lr, lr, lr, lr, sr, sr, sr, sr])
 
 
 
-nodes_per_edge = 4
+nodes_per_edge = 6
 meshes = af.mesh_from_points_and_edges(points, edges, nodes_per_edge)
 
 
