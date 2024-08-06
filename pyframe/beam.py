@@ -256,6 +256,7 @@ class Beam:
         # Shape: (num_elements, n, n)
         transformed_stiffness_matrices = np.einsum('ijk,ikl->ijl', T_transpose_K, transforms)
 
+
         return transformed_stiffness_matrices
     
 

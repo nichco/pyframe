@@ -34,7 +34,7 @@ class CSDLBeam:
         self.transformations_bookshelf = None
 
         # precompute lengths
-        self.lengths = self._lengths(mesh)
+        self.lengths, self.ll, self.mm, self.nn, self.D = self._lengths2(mesh)
 
     def fix(self, node):
 
@@ -49,24 +49,40 @@ class CSDLBeam:
     def add_load(self, load):
         self.loads = load
 
-    def _lengths(self, mesh):
-
-        lengths = csdl.Variable(value=np.zeros(self.num_elements))
-        for i in range(self.num_elements):
-            lengths = lengths.set(csdl.slice[i], csdl.norm(mesh[i+1] - mesh[i]))
-
-        return lengths
-    
     # def _lengths(self, mesh):
-    #     # Compute the squared differences
-    #     squared_diffs = (mesh[1:] - mesh[:-1])**2
-    #     # Sum the squared differences along the rows and take the square root
-    #     lengths = (csdl.sum(squared_diffs, axes=1))**0.5
-    #     return lengths
 
-    # def _lengths(self):
-    #     lengths = [np.linalg.norm(self.mesh[i+1] - self.mesh[i]) for i in range(self.num_elements)]
-    #     return np.array(lengths)
+    #     lengths = csdl.Variable(value=np.zeros(self.num_elements))
+    #     cp = csdl.Variable(value=np.zeros((self.num_elements, 3)))
+    #     for i in range(self.num_elements):
+    #         diff = mesh[i+1, :] - mesh[i, :]
+    #         L = csdl.norm(diff)
+    #         lengths = lengths.set(csdl.slice[i], L)
+    #         cp = cp.set(csdl.slice[i, :], diff / L)
+
+    #     # precomps for transforms
+    #     ll = cp[:, 0]
+    #     mm = cp[:, 1]
+    #     nn = cp[:, 2]
+    #     D = (ll**2 + mm**2)**0.5
+
+    #     return lengths, ll, mm, nn, D
+    
+    def _lengths2(self, mesh):
+        # Compute the squared differences
+        diffs = mesh[1:] - mesh[:-1]
+        # Sum the squared differences along the rows and take the square root
+        lengths = csdl.norm(diffs, axes=(1,))
+        exl = csdl.expand(lengths, (self.num_elements, 3), action='i->ij')
+        cp = diffs / exl
+
+        # precomps for transforms
+        ll = cp[:, 0]
+        mm = cp[:, 1]
+        nn = cp[:, 2]
+        D = (ll**2 + mm**2)**0.5
+
+
+        return lengths, ll, mm, nn, D
 
         
     def _local_stiffness_matrices(self):
@@ -179,6 +195,7 @@ class CSDLBeam:
         coef8aa2 = coef * 8 * aa2
         ncoef6aa2 = -coef * 6 * aa2
         rx2 = J / A
+        ncoef35rx2 = ncoef35 * rx2
 
         local_mass = csdl.Variable(value=np.zeros((self.num_elements, 12, 12)))
 
@@ -205,8 +222,8 @@ class CSDLBeam:
         local_mass = local_mass.set(csdl.slice[:, 4, 8], ncoef13aa)
         local_mass = local_mass.set(csdl.slice[:, 8, 4], ncoef13aa)
         local_mass = local_mass.set(csdl.slice[:, 8, 8], coef78)
-        local_mass = local_mass.set(csdl.slice[:, 3, 9], ncoef35 * rx2)
-        local_mass = local_mass.set(csdl.slice[:, 9, 3], ncoef35 * rx2)
+        local_mass = local_mass.set(csdl.slice[:, 3, 9], ncoef35rx2)
+        local_mass = local_mass.set(csdl.slice[:, 9, 3], ncoef35rx2)
         local_mass = local_mass.set(csdl.slice[:, 9, 9], coef70 * rx2)
         local_mass = local_mass.set(csdl.slice[:, 2, 10], coef13aa)
         local_mass = local_mass.set(csdl.slice[:, 10, 2], coef13aa)
@@ -229,19 +246,17 @@ class CSDLBeam:
 
     def _transforms(self):
 
-        # transforms = csdl.Variable(value=np.zeros((self.num_elements, 12, 12)))
-        
-        lengths = self.lengths
-        # T = csdl.Variable(value=np.zeros((12, 12)))
         T = csdl.Variable(value=np.zeros((self.num_elements, 12, 12)))
-        mesh = self.mesh
 
         block = csdl.Variable(value=np.zeros((self.num_elements, 3, 3)))
         for i in range(self.num_elements):
-            cp = (mesh[i + 1, :] - mesh[i, :]) / lengths[i]
-            ll, mm, nn = cp[0], cp[1], cp[2]
+            ll = self.ll[i]
+            mm = self.mm[i]
+            nn = self.nn[i]
             nmm = -mm # precomp for speed
-            D = (ll**2 + mm**2)**0.5
+            D = self.D[i]
+            nmmD = nmm / D
+            llD = ll / D
 
             if self.z:
                 block = block.set(csdl.slice[i, 0, 2], 1)
@@ -251,18 +266,11 @@ class CSDLBeam:
                 block = block.set(csdl.slice[i, 0, 0], ll)
                 block = block.set(csdl.slice[i, 0, 1], mm)
                 block = block.set(csdl.slice[i, 0, 2], nn)
-                block = block.set(csdl.slice[i, 1, 0], nmm / D)
-                block = block.set(csdl.slice[i, 1, 1], ll / D)
-                block = block.set(csdl.slice[i, 2, 0], -ll * nn / D)
-                block = block.set(csdl.slice[i, 2, 1], nmm * nn / D)
+                block = block.set(csdl.slice[i, 1, 0], nmmD)
+                block = block.set(csdl.slice[i, 1, 1], llD)
+                block = block.set(csdl.slice[i, 2, 0], -nn * llD)
+                block = block.set(csdl.slice[i, 2, 1], nn * nmmD)
                 block = block.set(csdl.slice[i, 2, 2], D)
-
-            # T = T.set(csdl.slice[i, 0:3, 0:3], block)
-            # T = T.set(csdl.slice[i, 3:6, 3:6], block)
-            # T = T.set(csdl.slice[i, 6:9, 6:9], block)
-            # T = T.set(csdl.slice[i, 9:12, 9:12], block)
-
-            # transforms = transforms.set(csdl.slice[i, :, :], T)
 
         T = T.set(csdl.slice[:, 0:3, 0:3], block)
         T = T.set(csdl.slice[:, 3:6, 3:6], block)
@@ -313,6 +321,7 @@ class CSDLBeam:
         T_transpose = csdl.einsum(transforms, action='ijk->ikj')
         # Shape: (num_elements, n, n)
         T_transpose_M = csdl.einsum(T_transpose, local_mass_matrices, action='ijk,ikl->ijl')
+
         # Shape: (num_elements, n, n)
         transformed_mass_matrices = csdl.einsum(T_transpose_M, transforms, action='ijk,ikl->ijl')
 
@@ -322,25 +331,14 @@ class CSDLBeam:
     def _recover_loads(self, U):
 
         map = self.map
-        # loads = []
-        # displacement = csdl.Variable(value=np.zeros((12)))
         displacements = csdl.Variable(value=np.zeros((self.num_elements, 12)))
         lsb = self.local_stiffness_bookshelf
         tb = self.transformations_bookshelf
 
         for i in range(self.num_elements):
             idxa, idxb = map[i], map[i+1]
-            # displacement = displacement.set(csdl.slice[0:6], U[idxa:idxa+6])
-            # displacement = displacement.set(csdl.slice[6:12], U[idxb:idxb+6])
             displacements = displacements.set(csdl.slice[i, 0:6], U[idxa:idxa+6])
             displacements = displacements.set(csdl.slice[i, 6:12], U[idxb:idxb+6])
-
-            # local_stiffness = lsb[i, :, :] # matrix
-            # T = tb[i] # list of matrices
-            # loads.append(csdl.matvec(local_stiffness, csdl.matvec(T, displacement)))
-
-        # local_stiffness = lsb[:, :, :]
-        # transformations = np.array(tb)
 
         # Perform transformations
         transformed_displacements = csdl.einsum(tb, displacements, action='ijk,ik->ij')
