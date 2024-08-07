@@ -2,6 +2,7 @@ import numpy as np
 import pyframe as pf
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
+from scipy.linalg import eigh
 
 
 class Frame:
@@ -10,6 +11,9 @@ class Frame:
         self.beams = []
         self.joints = []
         self.acc = None
+        self.K = None
+        self.M = None
+        self.dim = None
 
     def add_beam(self, beam:'pf.Beam'):
 
@@ -58,6 +62,7 @@ class Frame:
         # the degrees of freedom per node
         num = len(nodes)
         dim = num * 6
+        self.dim = dim
 
         helper = {node: i for i, node in enumerate(nodes)}
 
@@ -93,12 +98,43 @@ class Frame:
             stress[beam.name] = beam_stress
 
         return stress
+    
+
+    def compute_natural_frequency(self):
+        K = self.K
+        M = self.M
+
+        w, v = eigh(K, M)
+        omega = np.sqrt(w)
+
+        sorted_indices = np.argsort(omega)
+        natural_frequencies_sorted = omega[sorted_indices]
+        mode_shapes_sorted = v[:, sorted_indices]
+
+        print(mode_shapes_sorted.shape)
+
+        return natural_frequencies_sorted
+    
+
+    def compute_displacements(self, U):
+        
+        displacement = {}
+        for beam in self.beams:
+            # displacement[beam.name] = np.zeros((beam.num_nodes, 3))
+            displacement[beam.name] = np.empty((beam.num_nodes, 3))
+            map = beam.map
+
+            for i in range(beam.num_nodes):
+                idx = map[i]
+                # extract the (x, y, z) nodal displacement
+                displacement[beam.name][i, :] = U[idx:idx+3]
+
+        return displacement
 
 
     def solve(self):
 
         dim, num = self._utils()
-        
         
         # create the global stiffness matrix
         # and the global mass matrix
@@ -182,24 +218,17 @@ class Frame:
 
 
 
+        self.K = K
+        self.M = M
+
+
         # solve the system of equations
         # U = np.linalg.solve(K, F)
         K = sp.csr_matrix(K)
         U = spla.spsolve(K, F)
 
 
-
-        # find the displacements
-        displacement = {}
-        for beam in self.beams:
-            # displacement[beam.name] = np.zeros((beam.num_nodes, 3))
-            displacement[beam.name] = np.empty((beam.num_nodes, 3))
-            map = beam.map
-
-            for i in range(beam.num_nodes):
-                idx = map[i]
-                # extract the (x, y, z) nodal displacement
-                displacement[beam.name][i, :] = U[idx:idx+3]
+        displacement = self.compute_displacements(U)
 
 
         # # calculate the elemental loads and stresses
@@ -214,23 +243,7 @@ class Frame:
         #     stress[beam.name] = beam_stress
 
 
-        # mass properties
-        # mass = 0
-        # for beam in self.beams:
-        #     mass += beam._mass()
-
-
-
-        
-
-
-        return pf.Solution(displacement=displacement,
-                        #    stress=stress,
-                           M=M,
-                           K=K,
-                           F=F,
-                        #    mass=mass,
-                           )
+        return pf.Solution(displacement=displacement,)
 
 
 

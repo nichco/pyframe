@@ -30,7 +30,7 @@ class Beam:
         self.transformations_bookshelf = None
 
         # precompute lengths
-        self.lengths = self._lengths(mesh)
+        self.lengths, self.ll, self.mm, self.nn, self.D = self._lengths2(mesh)
 
     def fix(self, node):
 
@@ -53,16 +53,26 @@ class Beam:
 
     #     return lengths
     
-    def _lengths(self, mesh):
-        # Compute the squared differences
-        squared_diffs = (mesh[1:] - mesh[:-1]) ** 2
-        # Sum the squared differences along the rows and take the square root
-        lengths = np.sqrt(np.sum(squared_diffs, axis=1))
-        return lengths
+    # def _lengths(self, mesh):
+    #     # Compute the squared differences
+    #     squared_diffs = (mesh[1:] - mesh[:-1]) ** 2
+    #     # Sum the squared differences along the rows and take the square root
+    #     lengths = np.sqrt(np.sum(squared_diffs, axis=1))
+    #     return lengths
 
-    # def _lengths(self):
-    #     lengths = [np.linalg.norm(self.mesh[i+1] - self.mesh[i]) for i in range(self.num_elements)]
-    #     return np.array(lengths)
+    def _lengths2(self, mesh):
+        diffs = mesh[1:] - mesh[:-1]
+        lengths = np.linalg.norm(diffs, axis=1)
+        exl = np.tile(lengths[:, np.newaxis], (1, 3))
+        cp = diffs / exl
+
+        # precomps for transforms
+        ll = cp[:, 0]
+        mm = cp[:, 1]
+        nn = cp[:, 2]
+        D = (ll**2 + mm**2)**0.5
+
+        return lengths, ll, mm, nn, D
 
         
     def _local_stiffness_matrices(self):
@@ -201,30 +211,30 @@ class Beam:
     def _transforms(self):
 
         transforms = []
-        
-        lengths = self.lengths
+        ll = self.ll
+        mm = self.mm
+        nn = self.nn
+        D = self.D
         T = np.zeros((12, 12))
-        mesh = self.mesh
 
         for i in range(self.num_elements):
-            cp = (mesh[i + 1, :] - mesh[i, :]) / lengths[i]
-            ll, mm, nn = cp[0], cp[1], cp[2]
-            D = (ll**2 + mm**2)**0.5
+            lli, mmi, nni = ll[i], mm[i], nn[i]
+            Di = D[i]
 
             block = np.zeros((3, 3))
-            if D == 0:
+            if Di == 0:
                 block[0, 2] = 1
                 block[1, 1] = 1
                 block[2, 0] = -1
             else:
-                block[0, 0] = ll
-                block[0, 1] = mm
-                block[0, 2] = nn
-                block[1, 0] = -mm / D
-                block[1, 1] = ll / D
-                block[2, 0] = -ll * nn / D
-                block[2, 1] = -mm * nn / D
-                block[2, 2] = D
+                block[0, 0] = lli
+                block[0, 1] = mmi
+                block[0, 2] = nni
+                block[1, 0] = -mmi / Di
+                block[1, 1] = lli / Di
+                block[2, 0] = -lli * nni / Di
+                block[2, 1] = -mmi * nni / Di
+                block[2, 2] = Di
 
             T[0:3, 0:3] = block
             T[3:6, 3:6] = block
