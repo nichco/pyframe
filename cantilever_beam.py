@@ -35,5 +35,5 @@ displacement = solution.displacement['beam_1']
 print(displacement)
 
 
-natural_frequency = frame.compute_natural_frequency()
+natural_frequency, mode_shapes = frame.compute_natural_frequency()
 print(natural_frequency)

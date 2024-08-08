@@ -42,6 +42,10 @@ displacement1 = solution.displacement['beam_1']
 displacement2 = solution.displacement['beam_2']
 print(displacement1)
 
+
+natural_frequency = frame.compute_natural_frequency()
+print(natural_frequency)
+
 import matplotlib.pyplot as plt
 plt.rcParams.update(plt.rcParamsDefault)
 

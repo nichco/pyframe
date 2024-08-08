@@ -111,16 +111,21 @@ class Frame:
         natural_frequencies_sorted = omega[sorted_indices]
         mode_shapes_sorted = v[:, sorted_indices]
 
-        print(mode_shapes_sorted.shape)
+        shapes = [] # a list of dictionaries
+        for i in range(mode_shapes_sorted.shape[1]):
+            mode = mode_shapes_sorted[:, i]
+            mode /= np.linalg.norm(mode)
+            # shape is a dictionary of displacements
+            shape = self.compute_displacements(mode)
+            shapes.append(shape)
 
-        return natural_frequencies_sorted
+        return natural_frequencies_sorted, shapes
     
 
     def compute_displacements(self, U):
         
         displacement = {}
         for beam in self.beams:
-            # displacement[beam.name] = np.zeros((beam.num_nodes, 3))
             displacement[beam.name] = np.empty((beam.num_nodes, 3))
             map = beam.map
 
@@ -249,4 +254,3 @@ class Frame:
 
 
 
-    
