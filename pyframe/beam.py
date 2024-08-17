@@ -27,23 +27,29 @@ class Beam:
 
         # storage
         self.local_stiffness_bookshelf = None
-        self.transformations_bookshelf = None
 
         # precompute lengths
-        self.lengths, self.ll, self.mm, self.nn, self.D = self._lengths2(mesh)
+        self.lengths, self.ll, self.mm, self.nn, self.D = self._lengths(mesh)
+
+        # precompute transforms
+        self.transforms = self._transforms()
+
 
     def fix(self, node):
 
         if node not in self.boundary_conditions:
             self.boundary_conditions.append(node)
 
+
     def add_inertial_mass(self, mass, node):
         inertial_mass = np.zeros(self.num_nodes)
         inertial_mass[node] = mass
         self.extra_inertial_mass += inertial_mass
 
+
     def add_load(self, load):
         self.loads += load
+
 
     # def _lengths(self):
 
@@ -52,15 +58,9 @@ class Beam:
     #         lengths[i] = np.linalg.norm(self.mesh[i+1] - self.mesh[i])
 
     #     return lengths
-    
-    # def _lengths(self, mesh):
-    #     # Compute the squared differences
-    #     squared_diffs = (mesh[1:] - mesh[:-1]) ** 2
-    #     # Sum the squared differences along the rows and take the square root
-    #     lengths = np.sqrt(np.sum(squared_diffs, axis=1))
-    #     return lengths
 
-    def _lengths2(self, mesh):
+
+    def _lengths(self, mesh):
         diffs = mesh[1:] - mesh[:-1]
         lengths = np.linalg.norm(diffs, axis=1)
         exl = np.tile(lengths[:, np.newaxis], (1, 3))
@@ -74,7 +74,7 @@ class Beam:
 
         return lengths, ll, mm, nn, D
 
-        
+
     def _local_stiffness_matrices(self):
 
         A = self.cs.area
@@ -148,6 +148,7 @@ class Beam:
 
         return local_stiffness
     
+
     def _local_mass_matrices(self):
         
         A = self.cs.area
@@ -243,16 +244,15 @@ class Beam:
 
             transforms.append(T)
 
-        self.transformations_bookshelf = transforms
+        # self.transformations_bookshelf = transforms
 
         return transforms
 
-    def _transform_stiffness_matrices(self, transforms):
-        
+    def _transform_stiffness_matrices(self):
+        transforms = self.transforms
         local_stiffness_matrices = self._local_stiffness_matrices()
 
         # transformed_stiffness_matrices = []
-
         # for i in range(self.num_elements):
         #     T = transforms[i]
         #     local_stiffness = local_stiffness_matrices[i, :, :]
@@ -270,12 +270,11 @@ class Beam:
         return transformed_stiffness_matrices
     
 
-    def _transform_mass_matrices(self, transforms):
-
+    def _transform_mass_matrices(self):
+        transforms = self.transforms
         local_mass_matrices = self._local_mass_matrices()
 
         # transformed_mass_matrices = []
-
         # for i in range(self.num_elements):
         #     T = transforms[i]
         #     local_mass = local_mass_matrices[i, :, :]

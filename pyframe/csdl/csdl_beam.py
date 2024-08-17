@@ -15,59 +15,40 @@ class CSDLBeam:
         self.material = material
         self.cs = cs
         self.z = z
-
         self.num_nodes = mesh.shape[0]
         self.num_elements = self.num_nodes - 1
-
-        # self.loads = csdl.Variable(value=np.zeros((self.num_nodes, 6)))
-        # self.extra_inertial_mass = csdl.Variable(value=np.zeros((self.num_nodes)))
         self.loads = None
         self.extra_inertial_mass = None
-
         self.boundary_conditions = []
-
         # map the beam nodes to the global indices
         self.map = []
-
-        # storage
-        self.local_stiffness_bookshelf = None
-        self.transformations_bookshelf = None
-
         # precompute lengths
-        self.lengths, self.ll, self.mm, self.nn, self.D = self._lengths2(mesh)
+        self.lengths, self.ll, self.mm, self.nn, self.D = self._lengths(mesh)
+        # beam-specific functions
+        self.local_stiffness = self._local_stiffness_matrices()
+        self.local_mass = self._local_mass_matrices()
+        self.transforms = self._vectorized_transforms()
+        self.transformed_stiffness = self._transform_stiffness_matrices()
+        self.transformed_mass = self._transform_mass_matrices()
+
 
     def fix(self, node):
 
         if node not in self.boundary_conditions:
             self.boundary_conditions.append(node)
 
+
     def add_inertial_mass(self, mass, node):
         extra_mass = csdl.Variable(value=np.zeros(self.num_nodes))
         extra_mass = extra_mass.set(csdl.slice[node], mass)
         self.extra_inertial_mass = extra_mass
 
+
     def add_load(self, load):
         self.loads = load
 
-    # def _lengths(self, mesh):
-
-    #     lengths = csdl.Variable(value=np.zeros(self.num_elements))
-    #     cp = csdl.Variable(value=np.zeros((self.num_elements, 3)))
-    #     for i in range(self.num_elements):
-    #         diff = mesh[i+1, :] - mesh[i, :]
-    #         L = csdl.norm(diff)
-    #         lengths = lengths.set(csdl.slice[i], L)
-    #         cp = cp.set(csdl.slice[i, :], diff / L)
-
-    #     # precomps for transforms
-    #     ll = cp[:, 0]
-    #     mm = cp[:, 1]
-    #     nn = cp[:, 2]
-    #     D = (ll**2 + mm**2)**0.5
-
-    #     return lengths, ll, mm, nn, D
     
-    def _lengths2(self, mesh):
+    def _lengths(self, mesh):
         # Compute the squared differences
         diffs = mesh[1:] - mesh[:-1]
         # Sum the squared differences along the rows and take the square root
@@ -168,10 +149,10 @@ class CSDLBeam:
         local_stiffness = local_stiffness.set(csdl.slice[:, 10, 10], EIyL4)
         local_stiffness = local_stiffness.set(csdl.slice[:, 11, 11], EIzL4)
 
-        self.local_stiffness_bookshelf = local_stiffness
 
         return local_stiffness
     
+
     def _local_mass_matrices(self):
         
         A = self.cs.area
@@ -245,7 +226,10 @@ class CSDLBeam:
 
 
     def _transforms(self):
-
+        """
+        no longer used
+        use vectorized_transforms() instead
+        """
         T = csdl.Variable(value=np.zeros((self.num_elements, 12, 12)))
 
         block = csdl.Variable(value=np.zeros((self.num_elements, 3, 3)))
@@ -277,17 +261,62 @@ class CSDLBeam:
         T = T.set(csdl.slice[:, 6:9, 6:9], block)
         T = T.set(csdl.slice[:, 9:12, 9:12], block)
 
-        # self.transformations_bookshelf = transforms
+        # self.transformations_bookshelf = T
+
+        return T
+
+
+    def _vectorized_transforms(self):
+        """
+        a vectorized version of the transforms() method
+        thanks Mark
+        """
+        ll = self.ll
+        mm = self.mm
+        nn = self.nn
+        D = self.D
+        T = csdl.Variable(value=np.zeros((self.num_elements, 12, 12)))
+
+        if self.z:
+            zeros = csdl.Variable(value=np.zeros((self.num_elements,)))
+            ones = csdl.Variable(value=np.ones((self.num_elements,)))
+            lls_concat = zeros
+            mms_concat = zeros
+            nns_concat = ones
+            nmmDs_concat = zeros
+            llDs_concat = ones
+            nnllD_concant = -ones
+            nnnmmD_concant = zeros
+            Ds_concat = zeros
+        else:
+            lls_concat = ll
+            mms_concat = mm
+            nns_concat = nn
+            nmmDs_concat = -mm / D
+            llDs_concat = ll / D
+            nnllD_concant = -nn * llDs_concat
+            nnnmmD_concant = nn * nmmDs_concat
+            Ds_concat = D
+
+        T = T.set(csdl.slice[:, [0,3,6,9], [0,3,6,9]], lls_concat.expand((self.num_elements, 4), action='i->ij'))
+        T = T.set(csdl.slice[:, [0,3,6,9], [1,4,7,10]], mms_concat.expand((self.num_elements, 4), action='i->ij'))
+        T = T.set(csdl.slice[:, [0,3,6,9], [2,5,8,11]], nns_concat.expand((self.num_elements, 4), action='i->ij'))
+        T = T.set(csdl.slice[:, [1,4,7,10], [0,3,6,9]], nmmDs_concat.expand((self.num_elements, 4), action='i->ij'))
+        T = T.set(csdl.slice[:, [1,4,7,10], [1,4,7,10]], llDs_concat.expand((self.num_elements, 4), action='i->ij'))
+        T = T.set(csdl.slice[:, [2,5,8,11], [0,3,6,9]], nnllD_concant.expand((self.num_elements, 4), action='i->ij'))
+        T = T.set(csdl.slice[:, [2,5,8,11], [1,4,7,10]], nnnmmD_concant.expand((self.num_elements, 4), action='i->ij'))
+        T = T.set(csdl.slice[:, [2,5,8,11], [2,5,8,11]], Ds_concat.expand((self.num_elements, 4), action='i->ij'))
+
         self.transformations_bookshelf = T
 
         return T
 
-    def _transform_stiffness_matrices(self, transforms):
-        
-        local_stiffness_matrices = self._local_stiffness_matrices()
+
+    def _transform_stiffness_matrices(self):
+        transforms = self.transforms
+        local_stiffness_matrices = self.local_stiffness
 
         # transformed_stiffness_matrices = []
-
         # for i in range(self.num_elements):
         #     T = transforms[i]
         #     local_stiffness = local_stiffness_matrices[i, :, :]
@@ -305,9 +334,9 @@ class CSDLBeam:
         return transformed_stiffness_matrices
     
 
-    def _transform_mass_matrices(self, transforms):
-
-        local_mass_matrices = self._local_mass_matrices()
+    def _transform_mass_matrices(self):
+        transforms = self.transforms
+        local_mass_matrices = self.local_mass
 
         # transformed_mass_matrices = []
 
@@ -321,7 +350,6 @@ class CSDLBeam:
         T_transpose = csdl.einsum(transforms, action='ijk->ikj')
         # Shape: (num_elements, n, n)
         T_transpose_M = csdl.einsum(T_transpose, local_mass_matrices, action='ijk,ikl->ijl')
-
         # Shape: (num_elements, n, n)
         transformed_mass_matrices = csdl.einsum(T_transpose_M, transforms, action='ijk,ikl->ijl')
 
@@ -332,8 +360,8 @@ class CSDLBeam:
 
         map = self.map
         displacements = csdl.Variable(value=np.zeros((self.num_elements, 12)))
-        lsb = self.local_stiffness_bookshelf
-        tb = self.transformations_bookshelf
+        lsb = self.local_stiffness
+        tb = self.transforms
 
         for i in range(self.num_elements):
             idxa, idxb = map[i], map[i+1]

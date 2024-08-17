@@ -147,10 +147,9 @@ class Frame:
         M = np.zeros((dim, dim))
 
         for beam in self.beams:
-            transforms = beam._transforms()
             # lists of stiffness matrices for each element in the global frame
-            transformed_stiffness_matrices = beam._transform_stiffness_matrices(transforms)
-            transformed_mass_matrices = beam._transform_mass_matrices(transforms)
+            transformed_stiffness_matrices = beam._transform_stiffness_matrices()
+            transformed_mass_matrices = beam._transform_mass_matrices()
             # add the elemental stiffness/mass matrices to their locations in the 
             # global stiffness/mass matrix
             map = beam.map
@@ -170,8 +169,6 @@ class Frame:
                 M[idxb:idxb+6, idxa:idxa+6] += mass_matrix[6:, :6]
                 M[idxb:idxb+6, idxb:idxb+6] += mass_matrix[6:, 6:]
 
-        # maybe this is a speedup
-        # M = sp.csr_matrix(M)
 
         # # assemble te global loads vector
         F = np.zeros((dim))

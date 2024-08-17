@@ -13,26 +13,25 @@ class CSDLCSTube:
         
         self.radius = radius
         self.thickness = thickness
+        self.inner_radius = radius - thickness
+        self.outer_radius = radius
+        self.precomp = np.pi * (self.outer_radius**4 - self.inner_radius**4)
 
     @property
     def area(self):
-        inner_radius, outer_radius = self.radius - self.thickness, self.radius
-        return np.pi * (outer_radius**2 - inner_radius**2)
+        return np.pi * (self.outer_radius**2 - self.inner_radius**2)
     
     @property
     def ix(self):
-        inner_radius, outer_radius = self.radius - self.thickness, self.radius
-        return np.pi * (outer_radius**4 - inner_radius**4) / 2
+        return self.precomp / 2
     
     @property
     def iy(self):
-        inner_radius, outer_radius = self.radius - self.thickness, self.radius
-        return np.pi * (outer_radius**4 - inner_radius**4) / 4
+        return self.precomp / 4
     
     @property
     def iz(self):
-        inner_radius, outer_radius = self.radius - self.thickness, self.radius
-        return np.pi * (outer_radius**4 - inner_radius**4) / 4
+        return self.precomp / 4
     
 
     def stress(self, element_loads):
@@ -84,6 +83,7 @@ class CSDLCSCircle:
                  ):
         
         self.radius = radius
+        self.precomp = np.pi * self.radius**4
 
         self.area = self._area()
         self.ix = self._ix()
@@ -96,15 +96,15 @@ class CSDLCSCircle:
     
     # @property
     def _ix(self):
-        return (1 / 2) * np.pi * self.radius**4
+        return (1 / 2) * self.precomp
     
     # @property
     def _iy(self):
-        return (1 / 4) * np.pi * self.radius**4
+        return (1 / 4) * self.precomp
     
     # @property
     def _iz(self):
-        return (1 / 4) * np.pi * self.radius**4
+        return (1 / 4) * self.precomp
     
 
     def stress(self, element_loads):

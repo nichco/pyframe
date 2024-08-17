@@ -10,14 +10,18 @@ class CSDLFrame:
         self.beams = []
         self.joints = []
         self.acc = None
+        self.displacement = {}
+
 
     def add_beam(self, beam:'pf.CSDLBeam'):
 
         self.beams.append(beam)
 
+
     def add_joint(self, members:list, nodes:list):
         
         self.joints.append({'members': members, 'nodes': nodes})
+
 
     def add_acc(self, acc:np.array):
 
@@ -91,15 +95,14 @@ class CSDLFrame:
         M = csdl.Variable(value=np.zeros((dim, dim)))
 
         for beam in self.beams:
-            transforms = beam._transforms()
-            # lists of stiffness matrices for each element in the global frame
-            transformed_stiffness_matrices = beam._transform_stiffness_matrices(transforms)
-            transformed_mass_matrices = beam._transform_mass_matrices(transforms)
+            transformed_stiffness_matrices = beam.transformed_stiffness
+            transformed_mass_matrices = beam.transformed_mass
             # add the elemental stiffness/mass matrices to their locations in the 
             # global stiffness/mass matrix
             map = beam.map
 
             for i in range(beam.num_elements):
+            # for i, idxa, idxb in csdl.frange(vals = (list(range(beam.num_elements)), map[:-1], map[1:])):
                 stiffness = transformed_stiffness_matrices[i]
                 mass_matrix = transformed_mass_matrices[i]
                 idxa, idxb = map[i], map[i+1]
@@ -173,14 +176,11 @@ class CSDLFrame:
 
         # solve the system of equations
         U = csdl.solve_linear(K, F)
-        # K = sp.csr_matrix(K)
-        # U = spla.spsolve(K, F)
 
 
         # find the displacements
-        displacement = {}
         for beam in self.beams:
-            displacement[beam.name] = csdl.Variable(value=np.zeros((beam.num_nodes, 3)))
+            self.displacement[beam.name] = csdl.Variable(value=np.zeros((beam.num_nodes, 3)))
             map = beam.map
 
             map_u_to_d_x, map_u_to_d_y, map_u_to_d_z = [], [], []
@@ -193,7 +193,7 @@ class CSDLFrame:
                 # displacement[beam.name] = displacement[beam.name].set(csdl.slice[i, :], U[idx:idx+3])
 
             reshaped_U = csdl.transpose(csdl.vstack([U[map_u_to_d_x], U[map_u_to_d_y], U[map_u_to_d_z]]))
-            displacement[beam.name] = displacement[beam.name].set(csdl.slice[:, :], reshaped_U)
+            self.displacement[beam.name] = self.displacement[beam.name].set(csdl.slice[:, :], reshaped_U)
 
 
         # # calculate the elemental loads and stresses
@@ -208,26 +208,8 @@ class CSDLFrame:
         #     stress[beam.name] = beam_stress
 
 
-        # # mass properties
-        # mass = 0
-        # for beam in self.beams:
-        #     mass += beam._mass()
-
-
 
         
 
 
-        return pf.Solution(displacement=displacement,
-                        #    stress=stress,
-                           M=M,
-                           K=K,
-                           F=F,
-                        #    mass=mass,
-                           )
-
-
-
-
-
-    
+        return None

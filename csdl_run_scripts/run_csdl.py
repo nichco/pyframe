@@ -33,8 +33,8 @@ frame.add_beam(beam)
 acc = csdl.Variable(value=np.array([0, 0, -9.81, 0, 0, 0]))
 frame.add_acc(acc)
 
-solution = frame.solve()
-disp = solution.displacement['beam_1']
+frame.solve()
+disp = frame.displacement['beam_1']
 disp.set_as_constraint(upper=0.5)
 
 
@@ -49,12 +49,13 @@ recorder.stop()
 
 
 sim = csdl.experimental.JaxSimulator(recorder=recorder)
-# sim.run()
+sim.run()
+"""
 prob = CSDLAlphaProblem(problem_name='lander', simulator=sim)
 optimizer = SLSQP(prob, solver_options={'maxiter': 300, 'ftol': 1e-6, 'disp': True})
 optimizer.solve()
 optimizer.print_results()
-
+"""
 
 print(radius.value)
 print(disp.value)
