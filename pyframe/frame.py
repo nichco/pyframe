@@ -14,14 +14,19 @@ class Frame:
         self.K = None
         self.M = None
         self.dim = None
+        self.displacement = {}
+        self.stress = None
+
 
     def add_beam(self, beam:'pf.Beam'):
 
         self.beams.append(beam)
 
+
     def add_joint(self, members:list, nodes:list):
         
         self.joints.append({'members': members, 'nodes': nodes})
+
 
     def add_acc(self, acc:np.array):
 
@@ -94,10 +99,10 @@ class Frame:
             element_loads = np.vstack(element_loads)
             # perform a stress recovery
             beam_stress = beam.cs.stress(element_loads)
-
             stress[beam.name] = beam_stress
 
-        return stress
+        self.stress = stress
+        return None
     
 
     def compute_natural_frequency(self):
@@ -124,17 +129,16 @@ class Frame:
 
     def compute_displacements(self, U):
         
-        displacement = {}
         for beam in self.beams:
-            displacement[beam.name] = np.empty((beam.num_nodes, 3))
+            self.displacement[beam.name] = np.empty((beam.num_nodes, 3))
             map = beam.map
 
             for i in range(beam.num_nodes):
                 idx = map[i]
                 # extract the (x, y, z) nodal displacement
-                displacement[beam.name][i, :] = U[idx:idx+3]
+                self.displacement[beam.name][i, :] = U[idx:idx+3]
 
-        return displacement
+        return None
 
 
     def solve(self):
@@ -148,8 +152,8 @@ class Frame:
 
         for beam in self.beams:
             # lists of stiffness matrices for each element in the global frame
-            transformed_stiffness_matrices = beam._transform_stiffness_matrices()
-            transformed_mass_matrices = beam._transform_mass_matrices()
+            transformed_stiffness_matrices = beam.transformed_stiffness
+            transformed_mass_matrices = beam.transformed_mass
             # add the elemental stiffness/mass matrices to their locations in the 
             # global stiffness/mass matrix
             map = beam.map
@@ -230,22 +234,11 @@ class Frame:
         U = spla.spsolve(K, F)
 
 
-        displacement = self.compute_displacements(U)
+        self.compute_displacements(U)
+        self.compute_stress(U)
 
 
-        # # calculate the elemental loads and stresses
-        # stress = {}
-        # for beam in self.beams:
-        #     # elemental loads
-        #     element_loads = beam._recover_loads(U)
-        #     element_loads = np.vstack(element_loads)
-        #     # perform a stress recovery
-        #     beam_stress = beam.cs.stress(element_loads)
-
-        #     stress[beam.name] = beam_stress
-
-
-        return pf.Solution(displacement=displacement,)
+        return None
 
 
 

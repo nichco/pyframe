@@ -13,26 +13,21 @@ class Beam:
         self.mesh = mesh
         self.material = material
         self.cs = cs
-
         self.num_nodes = mesh.shape[0]
         self.num_elements = self.num_nodes - 1
-
         self.loads = np.zeros((self.num_nodes, 6))
         self.extra_inertial_mass = np.zeros((self.num_nodes))
-
         self.boundary_conditions = []
-
         # map the beam nodes to the global indices
         self.map = []
-
-        # storage
-        self.local_stiffness_bookshelf = None
-
         # precompute lengths
         self.lengths, self.ll, self.mm, self.nn, self.D = self._lengths(mesh)
-
-        # precompute transforms
+        # beam-specific functions
+        self.local_stiffness = self._local_stiffness_matrices()
+        self.local_mass = self._local_mass_matrices()
         self.transforms = self._transforms()
+        self.transformed_stiffness = self._transform_stiffness_matrices()
+        self.transformed_mass = self._transform_mass_matrices()
 
 
     def fix(self, node):
@@ -144,8 +139,6 @@ class Beam:
         local_stiffness[:, 10, 10] = 4*EIyL
         local_stiffness[:, 11, 11] = 4*EIzL
 
-        self.local_stiffness_bookshelf = local_stiffness
-
         return local_stiffness
     
 
@@ -244,13 +237,11 @@ class Beam:
 
             transforms.append(T)
 
-        # self.transformations_bookshelf = transforms
-
         return transforms
 
     def _transform_stiffness_matrices(self):
         transforms = self.transforms
-        local_stiffness_matrices = self._local_stiffness_matrices()
+        local_stiffness_matrices = self.local_stiffness
 
         # transformed_stiffness_matrices = []
         # for i in range(self.num_elements):
@@ -272,7 +263,7 @@ class Beam:
 
     def _transform_mass_matrices(self):
         transforms = self.transforms
-        local_mass_matrices = self._local_mass_matrices()
+        local_mass_matrices = self.local_mass
 
         # transformed_mass_matrices = []
         # for i in range(self.num_elements):
@@ -294,12 +285,9 @@ class Beam:
     def _recover_loads(self, U):
 
         map = self.map
-        # loads = []
-        # displacement = np.zeros((12))
-        # displacements = np.zeros((self.num_elements, 12))
         displacements = np.empty((self.num_elements, 12))
-        lsb = self.local_stiffness_bookshelf
-        tb = self.transformations_bookshelf
+        lsb = self.local_stiffness
+        tb = self.transforms
 
         for i in range(self.num_elements):
             idxa, idxb = map[i], map[i+1]

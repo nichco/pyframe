@@ -27,9 +27,7 @@ frame.add_beam(beam_1)
 acc = np.array([0, 0, -9.81, 0, 0, 0])
 frame.add_acc(acc)
 
+frame.solve()
 
-
-solution = frame.solve()
-
-displacement = solution.displacement['beam_1']
+displacement = frame.displacement['beam_1']
 print(displacement)

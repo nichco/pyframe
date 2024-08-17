@@ -61,6 +61,7 @@ frame.add_joint(members=[beams[11], beams[18], beams[19], beams[27], beams[24]],
 acc = np.array([0, 0, -9.81 * 40, 0, 0, 0])
 frame.add_acc(acc)
 
+
 import time
 # t1 = time.time()
 # solution = frame.solve()
@@ -70,10 +71,10 @@ import time
 # exit()
 def solve():
     t1 = time.time()
-    solution = frame.solve()
+    frame.solve()
     t2 = time.time()
     print('time: ', t2 - t1)
-    return solution
+    return None
 
 cProfile.run('solve()', 'profile_data')
 
@@ -92,18 +93,19 @@ print(tracemalloc.get_traced_memory())
 tracemalloc.stop()
 
 
+# frame.solve()
 exit()
 
 plotter = pv.Plotter()
 
 for i, beam in enumerate(frame.beams):
     mesh0 = beam.mesh
-    disp = solution.displacement[beam.name]
+    disp = frame.displacement[beam.name]
     mesh1 = mesh0 + 20 * disp
 
     radius = beam.cs.radius
 
-    stress = solution.stress[beam.name]
+    stress = frame.stress[beam.name]
 
     # af.plot_mesh(plotter, mesh0, color='lightblue', line_width=10)
     # plot_mesh(plotter, mesh1, cell_data=stress, cmap='viridis', line_width=20)
