@@ -1,43 +1,83 @@
 import numpy as np
 
 
-def distance_calc(mesh_in, mesh_out):
-    mesh_in_shape = mesh_in.shape
-    mesh_out_shape = mesh_out.shape
 
-    # Compute distances between in_mesh and out_mesh
-    # first we expand both meshes to fit the same shape
-    in_mesh_exp = np.expand_dims(mesh_in, axis=1)
-    in_mesh_exp = np.tile(in_mesh_exp, (1, mesh_out_shape[0], 1))
-    out_mesh_exp = np.expand_dims(mesh_out, axis=0)
-    out_mesh_exp = np.tile(out_mesh_exp, (mesh_in_shape[0], 1, 1))
-    # then we subtract their coordinates
-    mesh_dist_exp = in_mesh_exp - out_mesh_exp
-    # lastly we compute the 2-norm along the last axis of mesh_dist_exp
-    dist = np.linalg.norm(mesh_dist_exp, axis=2)
-
-    return dist
+class NodalMap:
+    def __init__(self, mesh_in: np.ndarray, mesh_out: np.ndarray, method='rbf'):
+        self.mesh_in = mesh_in
+        self.mesh_out = mesh_out
+        self.n, _ = mesh_in.shape
+        self.m, _ = mesh_out.shape
+        self.method = method
 
 
+    def rbf_weighting(self, eps=1):
+        # Compute the pairwise distances between each target point and all source points
+        distances = np.linalg.norm(mesh_in[:, np.newaxis, :] - mesh_out[np.newaxis, :, :], axis=2)
+
+        # Apply the radial basis function formula
+        # Gaussian kernel
+        weights = np.exp(-eps * distances**2)
+        weights /= weights.sum(axis=0, keepdims=True)  # Normalize the weights
+        
+        return weights
 
 
+    def inverse_distance_weighting(self, power=2):
+        # Compute the pairwise distances between each target point and all source points
+        distances = np.linalg.norm(mesh_in[:, np.newaxis, :] - mesh_out[np.newaxis, :, :], axis=2)
+        
+        # Apply the inverse distance weighting formula
+        with np.errstate(divide='ignore'):  # To handle division by zero
+            weights = 1.0 / distances**power
+            weights /= weights.sum(axis=0, keepdims=True)  # Normalize the weights
+        
+        return weights
+    
+    def evaluate(self, values):
+
+        if self.method == 'rbf':
+            weights = self.rbf_weighting()
+        elif self.method == 'idw':
+            weights = self.inverse_distance_weighting()
+        else:
+            raise ValueError(f"Invalid method: {self.method}")
+        
+        return self.mesh_out + weights.T @ values
 
 
 
 
 
 if __name__ == '__main__':
-    import numpy as np
-    np.random.seed(1)
 
-    in_shape_test = (5, 3)
-    out_shape_test = (8, 3)
+    n_in = 10
+    mesh_in = np.zeros((n_in, 3))
+    mesh_in[:, 0] = np.linspace(0, 10, n_in)
 
-    # define random solid and fluid mesh coordinates for testing
-    rng_solid_mesh = np.random.random(in_shape_test)
-    rng_fluid_mesh = np.random.random(out_shape_test)
+    n_out = 12
+    mesh_out = np.zeros((n_out, 3))
+    mesh_out[:, 0] = np.linspace(0, 10, n_out)
+    mesh_out[:, 1] = 0.2
 
-    # compare with numpy implementation
-    distance_array_np = distance_calc(rng_solid_mesh, rng_fluid_mesh)
-    print("Distance array numpy:")
-    print(distance_array_np)
+
+    disp = np.zeros((n_in, 3))
+    disp[:, 1] = np.linspace(0, 2, n_in)
+    def_mesh_in = mesh_in + disp
+
+
+
+    import matplotlib.pyplot as plt
+
+    nm = NodalMap(mesh_in, mesh_out, method='rbf')
+    ans = nm.evaluate(disp)
+    
+    plt.plot(mesh_in[:, 0], mesh_in[:, 1], label='mesh_in')
+    plt.scatter(mesh_in[:, 0], mesh_in[:, 1])
+    plt.scatter(mesh_out[:, 0], mesh_out[:, 1])
+    plt.plot(ans[:, 0], ans[:, 1], label='mapped_mesh')
+    plt.plot(def_mesh_in[:, 0], def_mesh_in[:, 1], label='def_mesh_in')
+
+    plt.scatter(ans[:, 0], ans[:, 1], color='red', s=70)
+
+    plt.show()
