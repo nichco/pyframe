@@ -8,9 +8,7 @@ import tracemalloc
 tracemalloc.start()
 
 
-#**************************************
-# ASSYMETRY CAUSED BY A BAD JOINT!!!!!
-#**************************************
+
 
 with open('lunar_lander_meshes.pkl', 'rb') as file:
     meshes, radius = pickle.load(file)
@@ -40,11 +38,11 @@ for i in range(28):
         beam.add_inertial_mass(100, 0)
 
     # add loads to four base beams:
-    if i in [20, 21, 22, 23]:
-        beam.add_load(dummy_load)
+    # if i in [20, 21, 22, 23]:
+    #     beam.add_load(dummy_load)
 
-    # if i in [24, 25, 26, 27]:  # add mass to top frame
-    #     beam.add_inertial_mass(50, 0)
+    if i in [24, 25, 26, 27]:  # add mass to top frame
+        beam.add_inertial_mass(50, 0)
 
     beams.append(beam)
     frame.add_beam(beam)
@@ -72,7 +70,7 @@ frame.add_joint(members=[beams[11], beams[18], beams[19], beams[27], beams[24]],
 
 
 acc = np.array([0, 0, -9.81 * 40, 0, 0, 0])
-# frame.add_acc(acc)
+frame.add_acc(acc)
 
 """
 import time
@@ -116,7 +114,7 @@ plotter = pv.Plotter()
 for i, beam in enumerate(frame.beams):
     mesh0 = beam.mesh
     d = disp[beam.name]
-    mesh1 = mesh0 + 20 * d
+    mesh1 = mesh0 + 25 * d
 
     radius = beam.cs.radius
 
