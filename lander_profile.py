@@ -122,7 +122,7 @@ for i, beam in enumerate(frame.beams):
 
     # af.plot_mesh(plotter, mesh0, color='lightblue', line_width=10)
     # plot_mesh(plotter, mesh1, cell_data=stress, cmap='viridis', line_width=20)
-    pf.plot_points(plotter, mesh1, color='blue', point_size=15)
+    pf.plot_points(plotter, mesh1, color='blue', point_size=10)
 
     # radius = np.ones((beam.num_elements)) * 0.1
     pf.plot_cyl(plotter, mesh1, cell_data=s, radius=radius, cmap='plasma')
