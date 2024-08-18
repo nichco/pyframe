@@ -18,6 +18,8 @@ class NodalMap:
         # Apply the radial basis function formula
         # Gaussian kernel
         weights = np.exp(-eps * distances**2)
+        # Thin-plate spline kernel
+        # weights = distances**4 * np.log(distances + 1e-6)
         weights /= weights.sum(axis=0, keepdims=True)  # Normalize the weights
         
         return weights
@@ -33,6 +35,7 @@ class NodalMap:
             weights /= weights.sum(axis=0, keepdims=True)  # Normalize the weights
         
         return weights
+    
     
     def evaluate(self, values):
 
