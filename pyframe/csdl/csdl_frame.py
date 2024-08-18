@@ -11,6 +11,7 @@ class CSDLFrame:
         self.joints = []
         self.acc = None
         self.displacement = {}
+        self.U = None
 
 
     def add_beam(self, beam:'pf.CSDLBeam'):
@@ -82,6 +83,21 @@ class CSDLFrame:
             mass += beam._mass()
 
         return mass
+    
+
+    def compute_stress(self):
+
+        # calculate the elemental loads and stresses
+        stress = {}
+        for beam in self.beams:
+            # elemental loads
+            element_loads = beam._recover_loads(self.U)
+            # element_loads = csdl.vstack(element_loads)
+            # perform a stress recovery
+            beam_stress = beam.cs.stress(element_loads)
+
+            stress[beam.name] = beam_stress
+        return stress
 
 
     def solve(self):
@@ -176,6 +192,7 @@ class CSDLFrame:
 
         # solve the system of equations
         U = csdl.solve_linear(K, F)
+        self.U = U
 
 
         # find the displacements
@@ -194,22 +211,6 @@ class CSDLFrame:
 
             reshaped_U = csdl.transpose(csdl.vstack([U[map_u_to_d_x], U[map_u_to_d_y], U[map_u_to_d_z]]))
             self.displacement[beam.name] = self.displacement[beam.name].set(csdl.slice[:, :], reshaped_U)
-
-
-        # # calculate the elemental loads and stresses
-        # stress = {}
-        # for beam in self.beams:
-        #     # elemental loads
-        #     element_loads = beam._recover_loads(U)
-        #     # element_loads = csdl.vstack(element_loads)
-        #     # perform a stress recovery
-        #     beam_stress = beam.cs.stress(element_loads)
-
-        #     stress[beam.name] = beam_stress
-
-
-
-        
 
 
         return None
