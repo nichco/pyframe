@@ -50,6 +50,7 @@ class NodalMap:
 
 
 if __name__ == '__main__':
+    import matplotlib.pyplot as plt
 
     n_in = 10
     mesh_in = np.zeros((n_in, 3))
@@ -65,10 +66,6 @@ if __name__ == '__main__':
     disp[:, 1] = np.linspace(0, 2, n_in)
     def_mesh_in = mesh_in + disp
 
-
-
-    import matplotlib.pyplot as plt
-
     nm = NodalMap(mesh_in, mesh_out, method='rbf')
     ans = nm.evaluate(disp)
     
@@ -77,7 +74,6 @@ if __name__ == '__main__':
     plt.scatter(mesh_out[:, 0], mesh_out[:, 1])
     plt.plot(ans[:, 0], ans[:, 1], label='mapped_mesh')
     plt.plot(def_mesh_in[:, 0], def_mesh_in[:, 1], label='def_mesh_in')
-
     plt.scatter(ans[:, 0], ans[:, 1], color='red', s=70)
 
     plt.show()
