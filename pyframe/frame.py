@@ -174,7 +174,7 @@ class Frame:
                 M[idxb:idxb+6, idxb:idxb+6] += mass_matrix[6:, 6:]
 
 
-        # # assemble te global loads vector
+        # # assemble the global loads vector
         F = np.zeros((dim))
         for beam in self.beams:
             loads = beam.loads
@@ -221,7 +221,6 @@ class Frame:
         K[indices, indices] = 1
         # zero the corresponding load index as well
         F[indices] = 0
-
 
 
         self.K = K
