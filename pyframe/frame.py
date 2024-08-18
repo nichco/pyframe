@@ -16,6 +16,7 @@ class Frame:
         self.dim = None
         self.displacement = {}
         self.stress = None
+        self.U = None
 
 
     def add_beam(self, beam:'pf.Beam'):
@@ -89,13 +90,13 @@ class Frame:
         return mass
     
 
-    def compute_stress(self, U):
+    def compute_stress(self):
 
         # calculate the elemental loads and stresses
         stress = {}
         for beam in self.beams:
             # elemental loads
-            element_loads = beam._recover_loads(U)
+            element_loads = beam._recover_loads(self.U)
             element_loads = np.vstack(element_loads)
             # perform a stress recovery
             beam_stress = beam.cs.stress(element_loads)
@@ -127,7 +128,7 @@ class Frame:
         return natural_frequencies_sorted, shapes
     
 
-    def compute_displacements(self, U):
+    def compute_displacements(self):
         
         for beam in self.beams:
             self.displacement[beam.name] = np.empty((beam.num_nodes, 3))
@@ -136,7 +137,7 @@ class Frame:
             for i in range(beam.num_nodes):
                 idx = map[i]
                 # extract the (x, y, z) nodal displacement
-                self.displacement[beam.name][i, :] = U[idx:idx+3]
+                self.displacement[beam.name][i, :] = self.U[idx:idx+3]
 
         return None
 
@@ -231,10 +232,11 @@ class Frame:
         # U = np.linalg.solve(K, F)
         K = sp.csr_matrix(K)
         U = spla.spsolve(K, F)
+        self.U = U
 
 
-        self.compute_displacements(U)
-        self.compute_stress(U)
+        self.compute_displacements()
+        self.compute_stress()
 
 
         return None
