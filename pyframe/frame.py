@@ -18,6 +18,9 @@ class Frame:
         self.stress = None
         self.U = None
 
+        self.u0 = None
+        self.F = None
+
 
     def add_beam(self, beam:'pf.Beam'):
 
@@ -104,6 +107,20 @@ class Frame:
 
         self.stress = stress
         return None
+    
+    # for dynamic simulation
+    def beam_stress(self, beam, u):
+
+        # calculate the elemental loads and stresses
+        # stress = {}
+        # for beam in self.beams:
+        # elemental loads
+        element_loads = beam._recover_loads(u)
+        element_loads = np.vstack(element_loads)
+        # perform a stress recovery
+        beam_stress = beam.cs.stress(element_loads)
+
+        return beam_stress
     
 
     def compute_natural_frequency(self):
@@ -226,6 +243,13 @@ class Frame:
 
         self.K = K
         self.M = M
+        self.F = F
+
+        # initial conditions for dynamic sim
+        no_loads = np.zeros((dim))
+        # u0 = np.linalg.solve(M, no_loads)
+        u0 = np.linalg.solve(K, no_loads)
+        self.u0 = u0
 
 
         # solve the system of equations
@@ -233,6 +257,10 @@ class Frame:
         K = sp.csr_matrix(K)
         U = spla.spsolve(K, F)
         self.U = U
+
+
+
+        
 
 
         self.compute_displacements()

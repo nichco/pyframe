@@ -56,12 +56,12 @@ class CSTube:
 
 
         # average the nodal loads
-        F_x = (F_x1 + F_x2) / 2
-        # F_y = (F_y1 + F_y2) / 2
-        # F_z = (F_z1 + F_z2) / 2
-        M_x = (M_x1 + M_x2) / 2
-        M_y = (M_y1 + M_y2) / 2
-        M_z = (M_z1 + M_z2) / 2
+        F_x = (F_x1 - F_x2) / 2
+        # F_y = (F_y1 - F_y2) / 2
+        # F_z = (F_z1 - F_z2) / 2
+        M_x = (M_x1 - M_x2) / 2
+        M_y = (M_y1 - M_y2) / 2
+        M_z = (M_z1 - M_z2) / 2
 
         axial_stress = F_x / self.area
         shear_stress = M_x * self.radius / self.ix
