@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Define the time array
-t = np.linspace(0, 1, 100)
+t = np.linspace(0, 15, 100)
 
 # Define the gust profile using the 1-cosine function
 def gust_velocity(t, t0, t1, V_max):
@@ -10,7 +10,7 @@ def gust_velocity(t, t0, t1, V_max):
 
 # Parameters for the gust profile
 t0 = 0
-t1 = 1
+t1 = 5
 V_max = 1
 
 # Calculate the gust velocity
