@@ -24,16 +24,16 @@ class Simulation:
         u = y[0:self.nu]
         u_dot = y[self.nu:-1]
 
-        # Force = self.F * np.cos(900 * t)
+        Force = self.F * np.cos(1 * t)
 
-        t0 = 0
-        t1 = 5
-        V_max = 1
+        # t0 = 0
+        # t1 = 5
+        # V_max = 1
         # gust = np.where((t >= t0) & (t <= t1), V_max * 0.5 * (1 - np.cos(2*np.pi * (t - t0) / (t1 - t0))), 0)
 
         # Force = self.F + 0.2 * gust * self.F
 
-        Force = self.F + 0.5 * self.F * (1 - np.cos(1.1 * t)) * (1 / (t+1))
+        # Force = self.F + 0.5 * self.F * (1 - np.cos(1.1 * t)) * (1 / (t+1))
 
         u_ddot = np.linalg.solve(self.M, Force - self.K @ u)
         # u_ddot = np.linalg.solve(self.M, self.F - self.K @ u)
