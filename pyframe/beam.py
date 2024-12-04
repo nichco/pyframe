@@ -160,43 +160,58 @@ class Beam:
         local_mass[:, 0, 0] = coef * 70
         local_mass[:, 1, 1] = coef * 78
         local_mass[:, 2, 2] = coef * 78
-        local_mass[:, 3, 3] = coef * 78 * rx2
-        local_mass[:, 2, 4] = coef * -22 * aa
-        local_mass[:, 4, 2] = coef * -22 * aa
+        # local_mass[:, 3, 3] = coef * 78 * rx2 # ?
+        local_mass[:, 3, 3] = coef * 70 * rx2 # ?
         local_mass[:, 4, 4] = coef * 8 * aa2
-        local_mass[:, 1, 5] = coef * 22 * aa
-        local_mass[:, 5, 1] = coef * 22 * aa
         local_mass[:, 5, 5] = coef * 8 * aa2
+        local_mass[:, 6, 6] = coef * 70
+        local_mass[:, 7, 7] = coef * 78
+        local_mass[:, 8, 8] = coef * 78
+        local_mass[:, 9, 9] = coef * 70 * rx2
+        local_mass[:, 10, 10] = coef * 8 * aa2
+        local_mass[:, 11, 11] = coef * 8 * aa2
+
         local_mass[:, 0, 6] = coef * 35
         local_mass[:, 6, 0] = coef * 35
-        local_mass[:, 6, 6] = coef * 70
+
+        local_mass[:, 1, 5] = coef * 22 * aa
+        local_mass[:, 5, 1] = coef * 22 * aa
+
         local_mass[:, 1, 7] = coef * 27
         local_mass[:, 7, 1] = coef * 27
-        local_mass[:, 5, 7] = coef * 13 * aa
-        local_mass[:, 7, 5] = coef * 13 * aa
-        local_mass[:, 7, 7] = coef * 78
-        local_mass[:, 2, 8] = coef * 27
-        local_mass[:, 8, 2] = coef * 27
-        local_mass[:, 4, 8] = coef * -13 * aa
-        local_mass[:, 8, 4] = coef * -13 * aa
-        local_mass[:, 8, 8] = coef * 78
-        local_mass[:, 3, 9] = coef * -35 * rx2
-        local_mass[:, 9, 3] = coef * -35 * rx2
-        local_mass[:, 9, 9] = coef * 70 * rx2
-        local_mass[:, 2, 10] = coef * 13 * aa
-        local_mass[:, 10, 2] = coef * 13 * aa
-        local_mass[:, 4, 10] = coef * -6 * aa2
-        local_mass[:, 10, 4] = coef * -6 * aa2
-        local_mass[:, 8, 10] = coef * 22 * aa
-        local_mass[:, 10, 8] = coef * 22 * aa
-        local_mass[:, 10, 10] = coef * 8 * aa2
+
         local_mass[:, 1, 11] = coef * -13 * aa
         local_mass[:, 11, 1] = coef * -13 * aa
+
+        local_mass[:, 2, 4] = coef * -22 * aa
+        local_mass[:, 4, 2] = coef * -22 * aa
+
+        local_mass[:, 2, 8] = coef * 27
+        local_mass[:, 8, 2] = coef * 27
+
+        local_mass[:, 2, 10] = coef * 13 * aa
+        local_mass[:, 10, 2] = coef * 13 * aa
+
+        local_mass[:, 3, 9] = coef * -35 * rx2
+        local_mass[:, 9, 3] = coef * -35 * rx2
+
+        local_mass[:, 4, 8] = coef * -13 * aa
+        local_mass[:, 8, 4] = coef * -13 * aa
+
+        local_mass[:, 4, 10] = coef * -6 * aa2
+        local_mass[:, 10, 4] = coef * -6 * aa2
+
+        local_mass[:, 5, 7] = coef * 13 * aa
+        local_mass[:, 7, 5] = coef * 13 * aa
+
         local_mass[:, 5, 11] = coef * -6 * aa2
         local_mass[:, 11, 5] = coef * -6 * aa2
+
         local_mass[:, 7, 11] = coef * -22 * aa
         local_mass[:, 11, 7] = coef * -22 * aa
-        local_mass[:, 11, 11] = coef * 8 * aa2
+
+        local_mass[:, 8, 10] = coef * 22 * aa
+        local_mass[:, 10, 8] = coef * 22 * aa
 
 
         return local_mass

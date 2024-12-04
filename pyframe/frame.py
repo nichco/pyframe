@@ -13,6 +13,10 @@ class Frame:
         self.acc = None
         self.K = None
         self.M = None
+
+        self.K_no_bc = None
+        self.M_no_bc = None
+
         self.dim = None
         self.displacement = {}
         self.stress = None
@@ -191,6 +195,8 @@ class Frame:
                 M[idxb:idxb+6, idxa:idxa+6] += mass_matrix[6:, :6]
                 M[idxb:idxb+6, idxb:idxb+6] += mass_matrix[6:, 6:]
 
+        self.K_no_bc = K
+        self.M_no_bc = M
 
         # # assemble the global loads vector
         F = np.zeros((dim))
@@ -239,6 +245,10 @@ class Frame:
         K[indices, indices] = 1
         # zero the corresponding load index as well
         F[indices] = 0
+
+        M[indices, :] = 0
+        M[:, indices] = 0
+        M[indices, indices] = 1
 
 
         self.K = K
