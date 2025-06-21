@@ -10,10 +10,11 @@ class Simulation:
     def __init__(self, frame, start, stop, nt):
 
         self.M = frame.M
+        self.M_inv = np.linalg.inv(self.M)
         self.K = frame.K
         self.F = frame.F
-        self.u0 = frame.u0
-        self.nu = len(self.u0)
+        self.u0 = np.zeros((len(frame.u0)*2))
+        self.nu = len(frame.u0)
         self.start = start
         self.stop = stop
         self.nt = nt
@@ -21,8 +22,8 @@ class Simulation:
         # self.node_dictionary = node_dictionary
 
     def _ode(self, t, y):
-        u = y[0:self.nu]
-        u_dot = y[self.nu:-1]
+        u = y[:self.nu]
+        u_dot = y[self.nu:]
 
         Force = self.F * np.cos(1 * t)
 
@@ -30,12 +31,15 @@ class Simulation:
         # t1 = 5
         # V_max = 1
         # gust = np.where((t >= t0) & (t <= t1), V_max * 0.5 * (1 - np.cos(2*np.pi * (t - t0) / (t1 - t0))), 0)
-
         # Force = self.F + 0.2 * gust * self.F
-
         # Force = self.F + 0.5 * self.F * (1 - np.cos(1.1 * t)) * (1 / (t+1))
+        cf = np.zeros((self.nu, self.nu))
+        cf[-4, -4] = 1000000
 
-        u_ddot = np.linalg.solve(self.M, Force - self.K @ u)
+        # J = cf @ u_dot
+        F = Force - cf @ u#u_dot
+
+        u_ddot = self.M_inv @ (F - self.K @ u)
         # u_ddot = np.linalg.solve(self.M, self.F - self.K @ u)
         return np.concatenate((u_dot, u_ddot))
 
