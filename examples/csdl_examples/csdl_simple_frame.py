@@ -68,7 +68,6 @@ frame.add_acc(acc)
 
 solution = frame.solve()
 
-# upper_disp = 0.5
 disp_1 = solution.displacement['beam_1']
 max_disp_1 = csdl.norm(disp_1[-1, :])
 max_disp_1.set_as_constraint(upper=0.5, scaler=1E1)
